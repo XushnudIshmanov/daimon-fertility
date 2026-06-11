@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Daimon Fertility</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+</head>
+<body>
+
+<!-- ══════════ LOGIN ══════════ -->
+<div id="s-login" class="screen active">
+  <div class="login-bg">
+    <div class="login-orb o1"></div>
+    <div class="login-orb o2"></div>
+    <div class="login-orb o3"></div>
+  </div>
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="lc-header">
+        <div class="lc-logo">🌿</div>
+        <h1 class="lc-title">Daimon Fertility</h1>
+        <p class="lc-sub">Moliyaviy boshqaruv tizimi</p>
+      </div>
+      <div class="lc-body">
+        <div class="lfield">
+          <label>LOGIN</label>
+          <div class="input-wrap">
+            <span class="input-icon">👤</span>
+            <input type="text" id="inp-login" placeholder="loginni kiriting"/>
+          </div>
+        </div>
+        <div class="lfield">
+          <label>PAROL</label>
+          <div class="input-wrap">
+            <span class="input-icon">🔒</span>
+            <input type="password" id="inp-pass" placeholder="••••••••"
+                   onkeydown="if(event.key==='Enter') doLogin()"/>
+          </div>
+        </div>
+        <button class="btn-login" onclick="doLogin()">
+          <span>Tizimga kirish</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+        <div class="login-err" id="login-err">⚠️ Login yoki parol noto'g'ri!</div>
+      </div>
+      <div class="lc-hints">
+        <div class="hint-item ceo-hint">
+          <span class="hint-badge ceo">CEO</span>
+          <span><b>juraev</b> / ewing1997</span>
+        </div>
+        <div class="hint-item mgr-hint">
+          <span class="hint-badge mgr">Manager</span>
+          <span><b>xishmanov</b> / xushnud007</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════ ASOSIY SAHIFA ══════════ -->
+<div id="s-main" class="screen">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-brand">
+      <span class="sb-logo">🌿</span>
+      <span class="sb-name">Daimon</span>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-section-label">ASOSIY</div>
+      <button class="sb-btn active" id="nav-dashboard" onclick="showDashboard()">
+        <span class="sb-icon">📊</span><span>Dashboard</span>
+      </button>
+      <button class="sb-btn" id="nav-dc" onclick="openPanel('dc')">
+        <span class="sb-icon">➕</span><span>Kunlik kredit</span>
+      </button>
+      <button class="sb-btn" id="nav-db" onclick="openPanel('db')">
+        <span class="sb-icon">➖</span><span>Debet</span>
+      </button>
+      <button class="sb-btn" id="nav-dt" onclick="openPanel('dt')">
+        <span class="sb-icon">📋</span><span>Qarz</span>
+      </button>
+      <button class="sb-btn" id="nav-hist" onclick="openPanel('hist')">
+        <span class="sb-icon">🕐</span><span>Tarix</span>
+      </button>
+
+      <!-- CEO ONLY -->
+      <div class="sb-section-label ceo-section" id="ceo-nav-label" style="display:none">CEO PANEL</div>
+      <button class="sb-btn ceo-only" id="nav-report" onclick="openPanel('report')" style="display:none">
+        <span class="sb-icon">📑</span><span>Hisobot</span>
+      </button>
+      <button class="sb-btn ceo-only" id="nav-users" onclick="openPanel('users')" style="display:none">
+        <span class="sb-icon">👥</span><span>Foydalanuvchilar</span>
+      </button>
+      <button class="sb-btn ceo-only" id="nav-settings" onclick="openPanel('settings')" style="display:none">
+        <span class="sb-icon">⚙️</span><span>Sozlamalar</span>
+      </button>
+      <button class="sb-btn ceo-only" id="nav-analytics" onclick="openPanel('analytics')" style="display:none">
+        <span class="sb-icon">📈</span><span>Analitika</span>
+      </button>
+    </nav>
+    <div class="sb-footer">
+      <div class="sb-user" id="sb-user-info">
+        <div class="sb-avatar" id="sb-avatar">F</div>
+        <div class="sb-uinfo">
+          <div class="sb-uname" id="sb-uname">—</div>
+          <div class="sb-urole" id="sb-urole">—</div>
+        </div>
+      </div>
+      <button class="sb-logout" onclick="doLogout()" title="Chiqish">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <!-- CONTENT -->
+  <main class="content">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+        <div class="page-title" id="page-title">Dashboard</div>
+      </div>
+      <div class="topbar-right">
+        <div class="role-badge" id="role-badge">—</div>
+        <div class="tb-user">
+          <div class="tb-avatar" id="tb-avatar">F</div>
+          <span id="tb-name">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── DASHBOARD ── -->
+    <div class="panel active" id="panel-dashboard">
+      <div class="stats-grid">
+        <div class="scard green">
+          <div class="scard-top">
+            <div class="scard-icon">💰</div>
+            <div class="scard-trend" id="bal-trend">↑</div>
+          </div>
+          <div class="scard-label">Joriy balans</div>
+          <div class="scard-val" id="st-bal">—</div>
+        </div>
+        <div class="scard blue">
+          <div class="scard-top">
+            <div class="scard-icon">📈</div>
+          </div>
+          <div class="scard-label">Bu oy kredit</div>
+          <div class="scard-val green-t" id="st-crd">—</div>
+        </div>
+        <div class="scard red">
+          <div class="scard-top">
+            <div class="scard-icon">📉</div>
+          </div>
+          <div class="scard-label">Bu oy debet</div>
+          <div class="scard-val red-t" id="st-dbt">—</div>
+        </div>
+        <div class="scard amber" id="scard-debt">
+          <div class="scard-top">
+            <div class="scard-icon">📋</div>
+          </div>
+          <div class="scard-label">Jami qarz</div>
+          <div class="scard-val amber-t" id="st-debt">—</div>
+        </div>
+      </div>
+
+      <!-- QUICK ACTIONS -->
+      <div class="section-title">Tezkor amallar</div>
+      <div class="quick-actions">
+        <button class="qa-btn" onclick="openPanel('dc')">
+          <div class="qa-icon" style="background:linear-gradient(135deg,#16A374,#0D7A57)">➕</div>
+          <div class="qa-label">Kunlik kredit</div>
+          <div class="qa-sub">Daromad qo'shish</div>
+        </button>
+        <button class="qa-btn" onclick="openPanel('db')">
+          <div class="qa-icon" style="background:linear-gradient(135deg,#E05252,#b83a3a)">➖</div>
+          <div class="qa-label">Debet</div>
+          <div class="qa-sub">Xarajat kiritish</div>
+        </button>
+        <button class="qa-btn" onclick="openPanel('dt')">
+          <div class="qa-icon" style="background:linear-gradient(135deg,#D97706,#b45e04)">📋</div>
+          <div class="qa-label">Qarz</div>
+          <div class="qa-sub">Qarz kiritish</div>
+        </button>
+        <button class="qa-btn" onclick="openPanel('hist')">
+          <div class="qa-icon" style="background:linear-gradient(135deg,#7C5CBF,#5a3fa0)">🕐</div>
+          <div class="qa-label">Tarix</div>
+          <div class="qa-sub">Barcha yozuvlar</div>
+        </button>
+      </div>
+
+      <!-- CEO ONLY QUICK ACTIONS -->
+      <div id="ceo-quick" style="display:none">
+        <div class="section-title">CEO Maxsus panel</div>
+        <div class="quick-actions">
+          <button class="qa-btn" onclick="openPanel('report')">
+            <div class="qa-icon" style="background:linear-gradient(135deg,#0ea5e9,#0369a1)">📑</div>
+            <div class="qa-label">Hisobot</div>
+            <div class="qa-sub">Oylik / Yillik</div>
+          </button>
+          <button class="qa-btn" onclick="openPanel('analytics')">
+            <div class="qa-icon" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9)">📊</div>
+            <div class="qa-label">Analitika</div>
+            <div class="qa-sub">Grafik ko'rinish</div>
+          </button>
+          <button class="qa-btn" onclick="openPanel('users')">
+            <div class="qa-icon" style="background:linear-gradient(135deg,#ec4899,#be185d)">👥</div>
+            <div class="qa-label">Foydalanuvchilar</div>
+            <div class="qa-sub">Boshqarish</div>
+          </button>
+          <button class="qa-btn" onclick="openPanel('settings')">
+            <div class="qa-icon" style="background:linear-gradient(135deg,#64748b,#334155)">⚙️</div>
+            <div class="qa-label">Sozlamalar</div>
+            <div class="qa-sub">Tizim</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- SO'NGGI TARIX -->
+      <div class="section-title">So'nggi amallar</div>
+      <div id="recent-list" class="recent-list"></div>
+    </div>
+
+    <!-- ── KUNLIK KREDIT ── -->
+    <div class="panel" id="panel-dc">
+      <div class="panel-header">
+        <div class="ph-icon" style="background:linear-gradient(135deg,#16A374,#0D7A57)">➕</div>
+        <div>
+          <div class="ph-title">Kunlik kredit qo'shish</div>
+          <div class="ph-sub">Daromad ma'lumotlarini kiriting</div>
+        </div>
+      </div>
+      <div class="form-body">
+        <div class="form-grid2">
+          <div class="ff">
+            <label>📅 Sana</label>
+            <input type="date" id="dc-date"/>
+          </div>
+          <div class="ff">
+            <label>💰 Jami (so'm)</label>
+            <input type="number" id="dc-total" placeholder="0"/>
+          </div>
+          <div class="ff">
+            <label>💳 Karta (so'm)</label>
+            <input type="number" id="dc-card" placeholder="0"/>
+          </div>
+          <div class="ff">
+            <label>💵 Naqd (so'm)</label>
+            <input type="number" id="dc-cash" placeholder="0"/>
+          </div>
+          <div class="ff full">
+            <label>🧾 Soliq naqdi (so'm)</label>
+            <input type="number" id="dc-taxcash" placeholder="0"/>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" onclick="saveDC()">✓ Saqlash</button>
+          <button class="btn-secondary" onclick="clearForm('dc')">🗑 Tozalash</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── DEBET ── -->
+    <div class="panel" id="panel-db">
+      <div class="panel-header">
+        <div class="ph-icon" style="background:linear-gradient(135deg,#E05252,#b83a3a)">➖</div>
+        <div>
+          <div class="ph-title">Debet kiritish</div>
+          <div class="ph-sub">Xarajat ma'lumotlarini kiriting</div>
+        </div>
+      </div>
+      <div class="form-body">
+        <div class="form-grid2">
+          <div class="ff">
+            <label>📅 Sana</label>
+            <input type="date" id="db-date"/>
+          </div>
+          <div class="ff">
+            <label>📌 Tur</label>
+            <select id="db-type">
+              <option value="1">💸 Xarajatlar</option>
+              <option value="2">👷 Maosh</option>
+              <option value="3">🔬 Lab Debit</option>
+            </select>
+          </div>
+          <div class="ff">
+            <label>💰 Miqdor (so'm)</label>
+            <input type="number" id="db-amount" placeholder="0"/>
+          </div>
+          <div class="ff full">
+            <label>📝 Sabab / Izoh</label>
+            <input type="text" id="db-reason" placeholder="masalan: ishchilarga oylik..."/>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-danger" onclick="saveDB()">✓ Saqlash</button>
+          <button class="btn-secondary" onclick="clearForm('db')">🗑 Tozalash</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── QARZ ── -->
+    <div class="panel" id="panel-dt">
+      <div class="panel-header">
+        <div class="ph-icon" style="background:linear-gradient(135deg,#D97706,#b45e04)">📋</div>
+        <div>
+          <div class="ph-title">Qarz kiritish</div>
+          <div class="ph-sub">Qarz ma'lumotlarini kiriting</div>
+        </div>
+      </div>
+      <div class="form-body">
+        <div class="form-grid2">
+          <div class="ff">
+            <label>💰 Jami (so'm)</label>
+            <input type="number" id="dt-total" placeholder="0"/>
+          </div>
+          <div class="ff full">
+            <label>📝 Sabab / Izoh</label>
+            <input type="text" id="dt-reason" placeholder="masalan: Amadiadan yuk keldi..."/>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-amber" onclick="saveDT()">✓ Saqlash</button>
+          <button class="btn-secondary" onclick="clearForm('dt')">🗑 Tozalash</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TARIX ── -->
+    <div class="panel" id="panel-hist">
+      <div class="panel-header">
+        <div class="ph-icon" style="background:linear-gradient(135deg,#7C5CBF,#5a3fa0)">🕐</div>
+        <div>
+          <div class="ph-title">Tarix</div>
+          <div class="ph-sub">Barcha moliyaviy yozuvlar</div>
+        </div>
+      </div>
+      <div class="hist-filters">
+        <div class="ff">
+          <label>Tur</label>
+          <select id="h-type" onchange="renderHistory()">
+            <option value="all">Hammasi</option>
+            <option value="credit">Kredit</option>
+            <option value="debit">Debet</option>
+            <option value="debt">Qarz</option>
+          </select>
+        </div>
+        <div class="ff">
+          <label>Dan</label>
+          <input type="date" id="h-from" onchange="renderHistory()"/>
+        </div>
+        <div class="ff">
+          <label>Gacha</label>
+          <input type="date" id="h-to" onchange="renderHistory()"/>
+        </div>
+        <button class="btn-filter" onclick="renderHistory()">🔍 Filter</button>
+      </div>
+      <div id="hist-body"></div>
+    </div>
+
+    <!-- ── CEO: HISOBOT ── -->
+    <div class="panel ceo-panel" id="panel-report">
+      <div class="panel-header">
+        <div class="ph-icon" style="background:linear-gradient(135deg,#0ea5e9,#0369a1)">📑</div>
+        <div>
+          <div class="ph-title">Oylik Hisobot</div>
+          <div class="ph-sub">CEO uchun moliyaviy tahlil</div>
+        </div>
+        <div class="ceo-badge">CEO ONLY</div>
+      </div>
+      <div class="report-grid" id="report-grid"></div>
+    </div>
+
+    <!-- ── CEO: ANALITIKA ── -->
+    <div class="panel ceo-panel" id="panel-analytics">
+      <div class="panel-header">
+        <div class="ph-icon" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9)">📊</div>
+        <div>
+          <div class="ph-title">Analitika</div>
+          <div class="ph-sub">Moliyaviy ko'rsatkichlar</div>
+        </div>
+        <div class="ceo-badge">CEO ONLY</div>
+      </div>
+      <div id="analytics-body"></div>
+    </div>
+
+    <!-- ── CEO: FOYDALANUVCHILAR ── -->
+    <div class="panel ceo-panel" id="panel-users">
+      <div class="panel-header">
+        <div class="ph-icon" style="background:linear-gradient(135deg,#ec4899,#be185d)">👥</div>
+        <div>
+          <div class="ph-title">Foydalanuvchilar</div>
+          <div class="ph-sub">Tizim foydalanuvchilari</div>
+        </div>
+        <div class="ceo-badge">CEO ONLY</div>
+      </div>
+      <div class="users-list" id="users-list"></div>
+    </div>
+
+    <!-- ── CEO: SOZLAMALAR ── -->
+    <div class="panel ceo-panel" id="panel-settings">
+      <div class="panel-header">
+        <div class="ph-icon" style="background:linear-gradient(135deg,#64748b,#334155)">⚙️</div>
+        <div>
+          <div class="ph-title">Sozlamalar</div>
+          <div class="ph-sub">Tizim sozlamalari</div>
+        </div>
+        <div class="ceo-badge">CEO ONLY</div>
+      </div>
+      <div class="settings-body">
+        <div class="setting-item">
+          <div class="si-label">
+            <div class="si-title">Ma'lumotlarni tozalash</div>
+            <div class="si-sub">Barcha kredit, debet va qarz yozuvlarini o'chirish</div>
+          </div>
+          <button class="btn-danger-sm" onclick="clearAllData()">🗑 Tozalash</button>
+        </div>
+        <div class="setting-item">
+          <div class="si-label">
+            <div class="si-title">Ma'lumotlarni eksport qilish</div>
+            <div class="si-sub">JSON formatda yuklab olish</div>
+          </div>
+          <button class="btn-primary-sm" onclick="exportData()">📥 Export</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+<!-- Overlay for mobile sidebar -->
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+<script src="/static/js/data.js"></script>
+<script src="/static/js/app.js"></script>
+</body>
+</html>
