@@ -1,536 +1,456 @@
-/* ══════════════════════════════════════════════════
-   DAIMON FERTILITY — APP.JS v2.0
-   CEO / Manager role separation + full logic
-══════════════════════════════════════════════════ */
+// ══════════════════════════════════════════════════
+//  DAIMON FERTILITY — APP.JS v2.0 (Server Sync)
+// ══════════════════════════════════════════════════
 
-/* ── YORDAMCHI ── */
-function formatMoney(n) {
-  return Number(n || 0).toLocaleString('uz-UZ') + " so'm";
-}
-function getToday() {
-  return new Date().toISOString().split('T')[0];
-}
-function showToast(msg, isError = false) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.style.background = isError ? '#E05252' : '#16A374';
-  t.style.display = 'block';
-  clearTimeout(t._t);
-  t._t = setTimeout(() => t.style.display = 'none', 2600);
-}
+const API_URL = ""; // Yagona server bazasi
 
-/* ── LOGIN ── */
-let currentUser = null;
-
-function doLogin() {
-  const login    = document.getElementById('inp-login').value.trim();
-  const password = document.getElementById('inp-pass').value.trim();
-
-  // Serverga yuborish
-  fetch('/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ login, password })
-  })
-  .then(r => r.json())
-  .then(data => {
-    if (!data.ok) {
-      document.getElementById('login-err').style.display = 'block';
-      return;
-    }
-    document.getElementById('login-err').style.display = 'none';
-    currentUser = data.user;
-    enterApp();
-  })
-  .catch(() => {
-    // Agar server ishlamasa, local USERS dan ham tekshirish
-    const user = (typeof USERS !== 'undefined')
-      ? USERS.find(u => u.login === login && u.password === password)
-      : null;
-    if (!user) {
-      document.getElementById('login-err').style.display = 'block';
-      return;
-    }
-    document.getElementById('login-err').style.display = 'none';
-    currentUser = user;
-    enterApp();
-  });
-}
-
-function enterApp() {
-  document.getElementById('s-login').classList.remove('active');
-  document.getElementById('s-main').classList.add('active');
-
-  const u = currentUser;
-  const isCEO = u.role === 'CEO';
-
-  // Sidebar user info
-  document.getElementById('sb-avatar').textContent = u.name[0];
-  document.getElementById('sb-uname').textContent  = u.name;
-  document.getElementById('sb-urole').textContent  = u.role;
-
-  // Topbar
-  document.getElementById('tb-avatar').textContent = u.name[0];
-  document.getElementById('tb-name').textContent   = u.name;
-  const rb = document.getElementById('role-badge');
-  rb.textContent = u.role;
-  rb.className   = 'role-badge ' + (isCEO ? 'ceo-badge-tb' : 'mgr-badge-tb');
-
-  // CEO menuları ko'rsatish
-  if (isCEO) {
-    document.getElementById('ceo-nav-label').style.display = 'block';
-    document.querySelectorAll('.ceo-only').forEach(el => el.style.display = 'flex');
-    document.getElementById('ceo-quick').style.display = 'block';
-  }
-
-  setDefaultDates();
-  loadAllData();
-  showDashboard();
-}
-
-function doLogout() {
-  currentUser = null;
-  document.getElementById('s-main').classList.remove('active');
-  document.getElementById('s-login').classList.add('active');
-  document.getElementById('inp-login').value = '';
-  document.getElementById('inp-pass').value  = '';
-  // CEO menu yashirish
-  document.getElementById('ceo-nav-label').style.display = 'none';
-  document.querySelectorAll('.ceo-only').forEach(el => el.style.display = 'none');
-  document.getElementById('ceo-quick').style.display = 'none';
-  // Sidebar yopish
-  document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('overlay').classList.remove('show');
-}
-
-/* ── SIDEBAR TOGGLE (mobile) ── */
-function toggleSidebar() {
-  document.getElementById('sidebar').classList.toggle('open');
-  document.getElementById('overlay').classList.toggle('show');
-}
-
-/* ── PANELLAR ── */
-const ALL_PANELS = ['dashboard','dc','db','dt','hist','report','analytics','users','settings'];
-const PANEL_TITLES = {
-  dashboard:'Dashboard', dc:'Kunlik kredit', db:'Debet',
-  dt:'Qarz', hist:'Tarix', report:'Hisobot',
-  analytics:'Analitika', users:'Foydalanuvchilar', settings:'Sozlamalar'
+let appState = {
+    currentUser: null,
+    transactions: []
 };
 
-function showDashboard() {
-  openPanel('dashboard');
+// Sahifa yuklanganda ishga tushadi
+document.addEventListener("DOMContentLoaded", () => {
+    // Bugungi sanani avtomatik qo'yish
+    const bugun = new Date().toISOString().split('T')[0];
+    if(document.getElementById("dc-date")) document.getElementById("dc-date").value = bugun;
+    if(document.getElementById("db-date")) document.getElementById("db-date").value = bugun;
+    if(document.getElementById("h-from")) document.getElementById("h-from").value = bugun;
+    if(document.getElementById("h-to")) document.getElementById("h-to").value = bugun;
+
+    // Seansni tekshirish
+    const savedUser = localStorage.getItem("daimon_user");
+    if (savedUser) {
+        appState.currentUser = JSON.parse(savedUser);
+        loadDashboardData();
+    }
+});
+
+// 1. TIZIMGA KIRISH (LOGIN)
+async function doLogin() {
+    const loginInp = document.getElementById("inp-login").value.trim();
+    const passInp = document.getElementById("inp-pass").value.trim();
+    const errDiv = document.getElementById("login-err");
+
+    errDiv.style.display = "none";
+
+    try {
+        const response = await fetch(`${API_URL}/api/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: loginInp, password: passInp })
+        });
+        const res = await response.json();
+
+        if (response.ok && res.success) {
+            appState.currentUser = res.user;
+            localStorage.setItem("daimon_user", JSON.stringify(res.user));
+            loadDashboardData();
+        } else {
+            errDiv.style.display = "block";
+        }
+    } catch (e) {
+        errDiv.innerText = "⚠️ Server bilan aloqa yo'q!";
+        errDiv.style.display = "block";
+    }
 }
 
-function openPanel(name) {
-  // CEO panelini faqat CEO ko'radi
-  const ceoPanels = ['report','analytics','users','settings'];
-  if (ceoPanels.includes(name) && (!currentUser || currentUser.role !== 'CEO')) {
-    showToast('⛔ Bu panel faqat CEO uchun!', true);
-    return;
-  }
-
-  ALL_PANELS.forEach(p => {
-    const panel = document.getElementById('panel-' + p);
-    if (panel) panel.classList.remove('active');
-    const btn = document.getElementById('nav-' + p);
-    if (btn) btn.classList.remove('active');
-  });
-
-  const panel = document.getElementById('panel-' + name);
-  if (panel) panel.classList.add('active');
-  const btn = document.getElementById('nav-' + name);
-  if (btn) btn.classList.add('active');
-
-  document.getElementById('page-title').textContent = PANEL_TITLES[name] || name;
-
-  // Panel ochilganda to'ldirish
-  if (name === 'hist')      renderHistory();
-  if (name === 'dashboard') renderDashboard();
-  if (name === 'report')    renderReport();
-  if (name === 'analytics') renderAnalytics();
-  if (name === 'users')     renderUsers();
-
-  // Mobile sidebar yopish
-  document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('overlay').classList.remove('show');
+// TIZIMDAN CHIQISH
+function doLogout() {
+    localStorage.removeItem("daimon_user");
+    appState.currentUser = null;
+    document.getElementById("s-main").classList.remove("active");
+    document.getElementById("s-login").classList.add("active");
 }
 
-/* ── DATA YUKLASH ── */
-function loadAllData() {
-  credits = loadData('df_credits') || [];
-  debits  = loadData('df_debits')  || [];
-  debts   = loadData('df_debts')   || [];
+// SERVERDAN MA'LUMOTLARNI OLISH VA INTERFEYSNI YANGILASH
+async function loadDashboardData() {
+    try {
+        const response = await fetch(`${API_URL}/api/data`);
+        const data = await response.json();
+        appState.transactions = data.transactions || [];
+
+        // Ekranni almashtirish
+        document.getElementById("s-login").classList.remove("active");
+        document.getElementById("s-main").classList.add("active");
+
+        // Profillarni to'ldirish
+        updateUserUI();
+        // Dashboard hisob-kitoblari
+        renderDashboard();
+    } catch (e) {
+        showToast("Ma'lumot yuklashda xatolik!", "red");
+    }
 }
 
-/* ── DEFAULT SANALAR ── */
-function setDefaultDates() {
-  const today = getToday();
-  const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
-  setVal('dc-date', today);
-  setVal('db-date', today);
-  setVal('h-from', today.substring(0,7) + '-01');
-  setVal('h-to', today);
+function updateUserUI() {
+    const user = appState.currentUser;
+    if (!user) return;
+
+    // Ismlar
+    document.getElementById("sb-uname").innerText = user.name;
+    document.getElementById("tb-name").innerText = user.name;
+    document.getElementById("sb-avatar").innerText = user.name[0].toUpperCase();
+    document.getElementById("tb-avatar").innerText = user.name[0].toUpperCase();
+
+    // Rollar
+    const roleText = user.role === "ceo" ? "Bosh Direktor" : "Menejer";
+    document.getElementById("sb-urole").innerText = roleText;
+    
+    const badge = document.getElementById("role-badge");
+    badge.innerText = user.role.toUpperCase();
+    badge.className = `role-badge ${user.role}-badge-tb`;
+
+    // CEO maxsus ko'rinishlari
+    if (user.role === "ceo") {
+        document.getElementById("ceo-nav-label").style.display = "block";
+        document.querySelectorAll(".ceo-only").forEach(el => el.style.display = "flex");
+        document.getElementById("ceo-quick").style.display = "block";
+    } else {
+        document.getElementById("ceo-nav-label").style.display = "none";
+        document.querySelectorAll(".ceo-only").forEach(el => el.style.display = "none");
+        document.getElementById("ceo-quick").style.display = "none";
+    }
 }
 
-/* ── STATISTIKA ── */
-function getStats() {
-  const now   = new Date();
-  const year  = now.getFullYear();
-  const month = now.getMonth();
-  function isThisMonth(d) {
-    const dt = new Date(d);
-    return dt.getFullYear() === year && dt.getMonth() === month;
-  }
-  const totalCredit = credits.filter(c => isThisMonth(c.date)).reduce((s,c) => s + (c.total||0), 0);
-  const totalDebit  = debits.filter(d  => isThisMonth(d.date)).reduce((s,d) => s + (d.amount||0), 0);
-  const totalDebt   = debts.reduce((s,d) => s + (d.total||0), 0);
-  const balance     = totalCredit - totalDebit - totalDebt;
-  return { totalCredit, totalDebit, totalDebt, balance };
-}
-
-function updateStats() {
-  const { totalCredit, totalDebit, totalDebt, balance } = getStats();
-  const balEl = document.getElementById('st-bal');
-  if (balEl) {
-    balEl.textContent = formatMoney(balance);
-    balEl.style.color = balance >= 0 ? 'var(--green)' : 'var(--red)';
-  }
-  const setT = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-  setT('st-crd',  formatMoney(totalCredit));
-  setT('st-dbt',  formatMoney(totalDebit));
-  setT('st-debt', formatMoney(totalDebt));
-}
-
-/* ── DASHBOARD ── */
+// DASHBOARD EKOSISTEMASI
 function renderDashboard() {
-  updateStats();
+    let joriyBalans = 0, buOyKredit = 0, buOyDebet = 0, jamiQarz = 0;
+    const bugun = new Date();
+    const joriyOy = bugun.toISOString().substring(0, 7); // YYYY-MM
 
-  // So'nggi 8 ta amal
-  let all = [];
-  credits.forEach(c => all.push({ date: c.date, kind: 'credit', label: 'Kunlik kredit', amount: c.total }));
-  debits.forEach(d  => all.push({ date: d.date, kind: 'debit',  label: DEBIT_TYPES[d.type] || 'Debet', amount: d.amount }));
-  debts.forEach(d   => all.push({ date: d.date, kind: 'debt',   label: 'Qarz', amount: d.total }));
-  all.sort((a,b) => b.date.localeCompare(a.date));
-  all = all.slice(0, 8);
+    appState.transactions.forEach(tx => {
+        const txOy = tx.date.substring(0, 7);
+        const summa = parseFloat(tx.amount) || 0;
 
-  const el = document.getElementById('recent-list');
-  if (!el) return;
+        if (tx.type === "credit") {
+            joriyBalans += summa;
+            if (txOy === joriyOy) buOyKredit += summa;
+        } else if (tx.type === "debit") {
+            joriyBalans -= summa;
+            if (txOy === joriyOy) buOyDebet += summa;
+        } else if (tx.type === "debt") {
+            jamiQarz += summa;
+        }
+    });
 
-  if (all.length === 0) {
-    el.innerHTML = `<div class="empty-state"><div class="es-icon">📭</div><p>Hali ma'lumot kiritilmagan</p></div>`;
-    return;
-  }
+    // Kartalarga yozish
+    document.getElementById("st-bal").innerText = formatMoney(joriyBalans);
+    document.getElementById("st-crd").innerText = formatMoney(buOyKredit);
+    document.getElementById("st-dbt").innerText = formatMoney(buOyDebet);
+    document.getElementById("st-debt").innerText = formatMoney(jamiQarz);
 
-  el.innerHTML = all.map(row => {
-    const bg    = row.kind === 'credit' ? 'var(--green-light)' : row.kind === 'debit' ? 'var(--red-light)' : 'var(--amber-light)';
-    const color = row.kind === 'credit' ? 'var(--green)'       : row.kind === 'debit' ? 'var(--red)'       : 'var(--amber)';
-    const icon  = row.kind === 'credit' ? '➕' : row.kind === 'debit' ? '➖' : '📋';
-    const sign  = row.kind === 'credit' ? '+' : '-';
-    return `
-      <div class="ri-item">
-        <div class="ri-dot" style="background:${bg}">${icon}</div>
-        <div class="ri-info">
-          <div class="ri-label">${row.label}</div>
-          <div class="ri-date">${row.date}</div>
-        </div>
-        <div class="ri-amount" style="color:${color}">${sign}${Number(row.amount).toLocaleString('uz-UZ')}</div>
-      </div>`;
-  }).join('');
+    // Trend belgisi
+    document.getElementById("bal-trend").innerText = joriyBalans >= 0 ? "↑" : "↓";
+
+    // So'nggi amallar ro'yxati (Top 5)
+    renderRecentList();
 }
 
-/* ── SAQLASH ── */
+function renderRecentList() {
+    const list = document.getElementById("recent-list");
+    if (!list) return; 
+    
+    list.innerHTML = "";
+
+    // O'zgaruvchi nomidagi tutuq belgisi olib tashlandi: songgilar
+    const songgilar = [...appState.transactions]
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
+        .slice(0, 5);
+
+    if (songgilar.length === 0) {
+        list.innerHTML = '<div class="empty-state"><div class="es-icon">📭</div><div>Hozircha amallar yo\'q</div></div>';
+        return;
+    }
+
+    songgilar.forEach(tx => {
+        let emoji = "➕";
+        let color = "var(--green)";
+        let sign = "+";
+        
+        if (tx.type === "debit") { 
+            emoji = "➖"; 
+            color = "var(--red)"; 
+            sign = "-"; 
+        }
+        if (tx.type === "debt") { 
+            emoji = "📋"; 
+            color = "var(--amber)"; 
+            sign = ""; 
+        }
+
+        const html = `
+            <div class="ri-item">
+                <div class="ri-dot" style="background:#f0f0f0; color:${color}">${emoji}</div>
+                <div class="ri-info">
+                    <div class="ri-label">${tx.reason || (tx.type === "credit" ? "Kunlik Tushum" : "Izohsiz")}</div>
+                    <div class="ri-date">${tx.date} • kiritdi: ${tx.author || 'Tizim'}</div>
+                </div>
+                <div class="ri-amount" style="color:${color}">${sign}${formatMoney(tx.amount)}</div>
+            </div>
+        `;
+        list.insertAdjacentHTML("beforeend", html);
+    });
+}
+
+// 2. TRANZAKSIYALARNI SAQLASH (SERVERGA)
+async function sendTransactionToServer(payload) {
+    payload.author = appState.currentUser.name;
+    try {
+        const response = await fetch(`${API_URL}/api/transactions`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        const res = await response.json();
+        if(response.ok && res.success) {
+            showToast("Ma'lumot muvaffaqiyatli saqlandi! ✨", "green");
+            await loadDashboardData(); // Ma'lumotlarni qayta tortib UI yangilaydi
+            showDashboard(); // Dashboard paneliga qaytadi
+        } else {
+            showToast("Saqlashda xatolik: " + res.message, "red");
+        }
+    } catch (e) {
+        showToast("Server xatosi!", "red");
+    }
+}
+
+// KUNLIK KREDIT SAQLASH
 function saveDC() {
-  const date    = document.getElementById('dc-date').value;
-  const total   = +document.getElementById('dc-total').value   || 0;
-  const card    = +document.getElementById('dc-card').value    || 0;
-  const cash    = +document.getElementById('dc-cash').value    || 0;
-  const taxCash = +document.getElementById('dc-taxcash').value || 0;
+    const jami = parseFloat(document.getElementById("dc-total").value) || 0;
+    const karta = parseFloat(document.getElementById("dc-card").value) || 0;
+    const naqd = parseFloat(document.getElementById("dc-cash").value) || 0;
+    const soliq = parseFloat(document.getElementById("dc-taxcash").value) || 0;
+    const sana = document.getElementById("dc-date").value;
 
-  if (!date || total <= 0) { showToast('⚠️ Sana va jami summani kiriting!', true); return; }
+    if (jami <= 0 || !sana) { showToast("Sana va Jami summani kiriting!", "amber"); return; }
 
-  const entry = { id: Date.now(), date, total, card, cash, taxCash };
-  credits.push(entry);
-  saveData('df_credits', credits);
-
-  // Serverga ham yuborish
-  fetch('/credit', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(entry) }).catch(()=>{});
-
-  clearForm('dc');
-  updateStats();
-  showToast('✅ Kredit muvaffaqiyatli saqlandi');
+    sendTransactionToServer({
+        type: "credit",
+        amount: jami,
+        date: sana,
+        reason: `Kunlik kredit (Naqd: ${naqd}, Karta: ${karta}, Soliq: ${soliq})`
+    });
+    clearForm('dc');
 }
 
+// DEBET SAQLASH
 function saveDB() {
-  const date   = document.getElementById('db-date').value;
-  const type   = +document.getElementById('db-type').value;
-  const amount = +document.getElementById('db-amount').value || 0;
-  const reason = document.getElementById('db-reason').value.trim();
+    const turMap = { "1": "Xarajatlar", "2": "Maosh", "3": "Lab Debit" };
+    const turId = document.getElementById("db-type").value;
+    const miqdor = parseFloat(document.getElementById("db-amount").value) || 0;
+    const sabab = document.getElementById("db-reason").value.trim();
+    const sana = document.getElementById("db-date").value;
 
-  if (!date || amount <= 0) { showToast('⚠️ Sana va summani kiriting!', true); return; }
+    if (miqdor <= 0 || !sana) { showToast("Sana va Miqdorni kiriting!", "amber"); return; }
 
-  const entry = { id: Date.now(), type, amount, reason, date };
-  debits.push(entry);
-  saveData('df_debits', debits);
-  fetch('/debit', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(entry) }).catch(()=>{});
-
-  clearForm('db');
-  updateStats();
-  showToast('✅ Debet muvaffaqiyatli saqlandi');
+    sendTransactionToServer({
+        type: "debit",
+        amount: miqdor,
+        date: sana,
+        reason: `[${turMap[turId]}] ${sabab}`
+    });
+    clearForm('db');
 }
 
+// QARZ SAQLASH
 function saveDT() {
-  const total  = +document.getElementById('dt-total').value || 0;
-  const reason = document.getElementById('dt-reason').value.trim();
+    const miqdor = parseFloat(document.getElementById("dt-total").value) || 0;
+    const sabab = document.getElementById("dt-reason").value.trim();
+    const bugun = new Date().toISOString().split('T')[0];
 
-  if (total <= 0) { showToast('⚠️ Summani kiriting!', true); return; }
+    if (miqdor <= 0) { showToast("Qarz miqdorini kiriting!", "amber"); return; }
 
-  const entry = { id: Date.now(), total, reason, date: getToday() };
-  debts.push(entry);
-  saveData('df_debts', debts);
-  fetch('/debt', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(entry) }).catch(()=>{});
-
-  clearForm('dt');
-  updateStats();
-  showToast('✅ Qarz muvaffaqiyatli saqlandi');
+    sendTransactionToServer({
+        type: "debt",
+        amount: miqdor,
+        date: bugun,
+        reason: `Qarz: ${sabab}`
+    });
+    clearForm('dt');
 }
 
-/* ── FORM TOZALASH ── */
-function clearForm(type) {
-  if (type === 'dc') {
-    ['dc-total','dc-card','dc-cash','dc-taxcash'].forEach(id => {
-      const el = document.getElementById(id); if (el) el.value = '';
-    });
-    document.getElementById('dc-date').value = getToday();
-  }
-  if (type === 'db') {
-    ['db-amount','db-reason'].forEach(id => {
-      const el = document.getElementById(id); if (el) el.value = '';
-    });
-    document.getElementById('db-date').value = getToday();
-  }
-  if (type === 'dt') {
-    ['dt-total','dt-reason'].forEach(id => {
-      const el = document.getElementById(id); if (el) el.value = '';
-    });
-  }
-}
-
-/* ── TARIX ── */
+// 3. TARIX PANELINI FILTRLASH VA CHIZISH
 function renderHistory() {
-  const filterType = document.getElementById('h-type').value;
-  const fromDate   = document.getElementById('h-from').value;
-  const toDate     = document.getElementById('h-to').value;
+    const tur = document.getElementById("h-type").value;
+    const dan = document.getElementById("h-from").value;
+    const gacha = document.getElementById("h-to").value;
+    const body = document.getElementById("hist-body");
 
-  function inRange(d) {
-    return (!fromDate || d >= fromDate) && (!toDate || d <= toDate);
-  }
+    let filtrlandi = [...appState.transactions];
 
-  let rows = [];
-  if (filterType === 'all' || filterType === 'credit') {
-    credits.filter(c => inRange(c.date)).forEach(c => rows.push({
-      date: c.date, kind: 'credit', label: 'Kunlik kredit', amount: c.total,
-      detail: `Karta: ${Number(c.card||0).toLocaleString('uz-UZ')} | Naqd: ${Number(c.cash||0).toLocaleString('uz-UZ')}`
-    }));
-  }
-  if (filterType === 'all' || filterType === 'debit') {
-    debits.filter(d => inRange(d.date)).forEach(d => rows.push({
-      date: d.date, kind: 'debit', label: DEBIT_TYPES[d.type] || 'Debet', amount: d.amount, detail: d.reason || '—'
-    }));
-  }
-  if (filterType === 'all' || filterType === 'debt') {
-    debts.filter(d => inRange(d.date)).forEach(d => rows.push({
-      date: d.date, kind: 'debt', label: 'Qarz', amount: d.total, detail: d.reason || '—'
-    }));
-  }
+    if (tur !== "all") filtrlandi = filtrlandi.filter(t => t.type === tur);
+    if (dan) filtrlandi = filtrlandi.filter(t => t.date >= dan);
+    if (gacha) filtrlandi = filtrlandi.filter(t => t.date <= gacha);
 
-  rows.sort((a,b) => b.date.localeCompare(a.date));
-  const body = document.getElementById('hist-body');
+    if(filtrlandi.length === 0) {
+        body.innerHTML = `<div class="empty-state"><div class="es-icon">🔍</div><div>Mos yozuvlar topilmadi</div></div>`;
+        return;
+    }
 
-  if (rows.length === 0) {
-    body.innerHTML = `<div class="empty-state"><div class="es-icon">📭</div><p>Bu davr uchun ma'lumot topilmadi</p></div>`;
-    return;
-  }
+    let jamiSumma = filtrlandi.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
 
-  let grand = 0;
-  let html = `<div class="htable-wrap"><table class="htable">
-    <thead><tr><th>Sana</th><th>Tur</th><th>Summa</th><th>Izoh</th></tr></thead><tbody>`;
+    let html = `
+        <div class="htable-wrap">
+            <table class="htable">
+                <thead>
+                    <tr>
+                        <th>Sana</th>
+                        <th>Tur</th>
+                        <th>Tafsilot / Izoh</th>
+                        <th>Kiritdi</th>
+                        <th>Miqdor</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
 
-  rows.forEach(r => {
-    grand += r.kind === 'credit' ? r.amount : -r.amount;
-    const bc = r.kind === 'credit' ? 'badge-green' : r.kind === 'debit' ? 'badge-red' : 'badge-amber';
-    html += `<tr>
-      <td>${r.date}</td>
-      <td><span class="badge ${bc}">${r.label}</span></td>
-      <td style="font-weight:700">${Number(r.amount).toLocaleString('uz-UZ')}</td>
-      <td style="color:var(--muted)">${r.detail}</td>
-    </tr>`;
-  });
+    filtrlandi.forEach(t => {
+        let bCls = "badge-green", tNm = "Kredit";
+        if(t.type === "debit") { bCls = "badge-red"; tNm = "Debet"; }
+        if(t.type === "debt") { bCls = "badge-amber"; tNm = "Qarz"; }
 
-  html += `</tbody></table>
-    <div class="hist-total-row">
-      <span class="hist-total-label">Jami natija:</span>
-      <span class="hist-total-val" style="color:${grand >= 0 ? 'var(--green)' : 'var(--red)'}">${formatMoney(grand)}</span>
-    </div>
-  </div>`;
+        html += `
+            <tr>
+                <td>${t.date}</td>
+                <td><span class="badge ${bCls}">${tNm}</span></td>
+                <td><strong>${t.reason || '-'}</strong></td>
+                <td>${t.author || 'Tizim'}</td>
+                <td><strong>${formatMoney(t.amount)}</strong></td>
+            </tr>
+        `;
+    });
 
-  body.innerHTML = html;
-}
-
-/* ── CEO: HISOBOT ── */
-function renderReport() {
-  // Oyma-oy kredit/debet hisobi
-  const monthMap = {};
-  credits.forEach(c => {
-    const m = c.date.substring(0,7);
-    if (!monthMap[m]) monthMap[m] = { credit:0, debit:0 };
-    monthMap[m].credit += c.total || 0;
-  });
-  debits.forEach(d => {
-    const m = d.date.substring(0,7);
-    if (!monthMap[m]) monthMap[m] = { credit:0, debit:0 };
-    monthMap[m].debit += d.amount || 0;
-  });
-
-  const months = Object.keys(monthMap).sort().reverse().slice(0,6);
-  const el = document.getElementById('report-grid');
-  if (!el) return;
-
-  if (months.length === 0) {
-    el.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="es-icon">📭</div><p>Hali ma'lumot yo'q</p></div>`;
-    return;
-  }
-
-  const monthNames = ['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentabr','Oktabr','Noyabr','Dekabr'];
-
-  el.innerHTML = months.map(m => {
-    const [y, mo] = m.split('-');
-    const name   = monthNames[parseInt(mo)-1] + ' ' + y;
-    const d      = monthMap[m];
-    const profit = d.credit - d.debit;
-    return `
-      <div class="rcard">
-        <div class="rcard-month">${name}</div>
-        <div class="rcard-row">
-          <span style="color:var(--muted)">Kredit</span>
-          <span style="color:var(--green);font-weight:700">+${Number(d.credit).toLocaleString('uz-UZ')}</span>
+    html += `
+                </tbody>
+            </table>
+            <div class="hist-total-row">
+                <span class="hist-total-label">Filtrlangan jami miqdor:</span>
+                <span class="hist-total-val" style="color:var(--green)">${formatMoney(jamiSumma)}</span>
+            </div>
         </div>
-        <div class="rcard-row">
-          <span style="color:var(--muted)">Debet</span>
-          <span style="color:var(--red);font-weight:700">-${Number(d.debit).toLocaleString('uz-UZ')}</span>
-        </div>
-        <div class="rcard-row">
-          <span style="font-weight:700">Foyda</span>
-          <span style="color:${profit>=0?'var(--green)':'var(--red)'};font-weight:800">${formatMoney(profit)}</span>
-        </div>
-      </div>`;
-  }).join('');
+    `;
+    body.innerHTML = html;
 }
 
-/* ── CEO: ANALITIKA ── */
-function renderAnalytics() {
-  const { totalCredit, totalDebit, totalDebt, balance } = getStats();
-  const el = document.getElementById('analytics-body');
-  if (!el) return;
-
-  const allCredit = credits.reduce((s,c) => s + (c.total||0), 0);
-  const allDebit  = debits.reduce((s,d) => s + (d.amount||0), 0);
-  const maxVal    = Math.max(allCredit, allDebit, 1);
-
-  // Debet tur bo'yicha
-  const byType = {};
-  debits.forEach(d => {
-    const t = DEBIT_TYPES[d.type] || 'Boshqa';
-    byType[t] = (byType[t] || 0) + (d.amount || 0);
-  });
-
-  const bars = Object.entries(byType).sort((a,b) => b[1]-a[1]).map(([label, val]) => `
-    <div class="bar-row">
-      <div class="bar-label">${label}</div>
-      <div class="bar-track"><div class="bar-fill" style="width:${(val/Math.max(...Object.values(byType),1)*100).toFixed(1)}%;background:var(--red)"></div></div>
-      <div class="bar-val" style="color:var(--red)">${Number(val).toLocaleString('uz-UZ')}</div>
-    </div>`).join('');
-
-  el.innerHTML = `
-    <div class="analytics-cards">
-      <div class="ac-item">
-        <div class="ac-title">Jami kredit (barcha vaqt)</div>
-        <div class="ac-val" style="color:var(--green)">+${Number(allCredit).toLocaleString('uz-UZ')}</div>
-        <div class="ac-sub">so'm</div>
-      </div>
-      <div class="ac-item">
-        <div class="ac-title">Jami debet (barcha vaqt)</div>
-        <div class="ac-val" style="color:var(--red)">-${Number(allDebit).toLocaleString('uz-UZ')}</div>
-        <div class="ac-sub">so'm</div>
-      </div>
-      <div class="ac-item">
-        <div class="ac-title">Bu oy balans</div>
-        <div class="ac-val" style="color:${balance>=0?'var(--green)':'var(--red)'}">${formatMoney(balance)}</div>
-        <div class="ac-sub">kredit - debet - qarz</div>
-      </div>
-      <div class="ac-item">
-        <div class="ac-title">Jami qarz</div>
-        <div class="ac-val" style="color:var(--amber)">${formatMoney(totalDebt)}</div>
-        <div class="ac-sub">to'lanmagan qarzlar</div>
-      </div>
-    </div>
-    <div style="background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:20px;box-shadow:var(--shadow)">
-      <div class="section-title">Debet turlari bo'yicha</div>
-      ${bars || '<div class="empty-state"><div class="es-icon">📊</div><p>Ma\'lumot yo\'q</p></div>'}
-    </div>
-    <div style="background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:20px;box-shadow:var(--shadow);margin-top:14px">
-      <div class="section-title">Kredit vs Debet (jami)</div>
-      <div class="bar-row">
-        <div class="bar-label">Kredit</div>
-        <div class="bar-track"><div class="bar-fill" style="width:${(allCredit/maxVal*100).toFixed(1)}%;background:var(--green)"></div></div>
-        <div class="bar-val" style="color:var(--green)">${Number(allCredit).toLocaleString('uz-UZ')}</div>
-      </div>
-      <div class="bar-row">
-        <div class="bar-label">Debet</div>
-        <div class="bar-track"><div class="bar-fill" style="width:${(allDebit/maxVal*100).toFixed(1)}%;background:var(--red)"></div></div>
-        <div class="bar-val" style="color:var(--red)">${Number(allDebit).toLocaleString('uz-UZ')}</div>
-      </div>
-    </div>`;
+// CEO MAKSUS: HISOBOT VA ANALITIKA GENERATSIYASI
+function renderCEOPanels(pId) {
+    if(pId === 'report') {
+        const grid = document.getElementById("report-grid");
+        grid.innerHTML = "";
+        const oylar = {};
+        appState.transactions.forEach(t => {
+            const oy = t.date.substring(0, 7);
+            if(!oylar[oy]) oylar[oy] = { c: 0, d: 0, db: 0 };
+            if(t.type === 'credit') oylar[oy].c += t.amount;
+            if(t.type === 'debit') oylar[oy].d += t.amount;
+            if(t.type === 'debt') oylar[oy].db += t.amount;
+        });
+        Object.keys(oylar).sort().reverse().forEach(o => {
+            const data = oylar[o];
+            grid.insertAdjacentHTML("beforeend", `
+                <div class="rcard">
+                    <div class="rcard-month">📅 ${o}</div>
+                    <div class="rcard-row"><span>Kredit (Tushum):</span><span class="green-t">+${formatMoney(data.c)}</span></div>
+                    <div class="rcard-row"><span>Debet (Xarajat):</span><span class="red-t">-${formatMoney(data.d)}</span></div>
+                    <div class="rcard-row"><span>Olingan qarzlar:</span><span class="amber-t">${formatMoney(data.db)}</span></div>
+                    <div class="rcard-row"><span>Sof Foyda:</span><strong style="color:var(--text)">${formatMoney(data.c - data.d)}</strong></div>
+                </div>
+            `);
+        });
+    }
+    if(pId === 'analytics') {
+        const body = document.getElementById("analytics-body");
+        let jamiKredit = 0, jamiDebet = 0;
+        appState.transactions.forEach(t => {
+            if(t.type === 'credit') jamiKredit += t.amount;
+            if(t.type === 'debit') jamiDebet += t.amount;
+        });
+        let xarajatFoiz = jamiKredit > 0 ? Math.min(100, Math.round((jamiDebet / jamiKredit) * 100)) : 0;
+        body.innerHTML = `
+            <div class="analytics-cards">
+                <div class="ac-item"><div class="ac-title">Jami Daromad</div><div class="ac-val">${formatMoney(jamiKredit)}</div></div>
+                <div class="ac-item"><div class="ac-title">Jami Xarajat</div><div class="ac-val" style="color:var(--red)">${formatMoney(jamiDebet)}</div></div>
+            </div>
+            <div class="scard" style="margin-top:15px">
+                <div class="section-title">Daromadga nisbatan xarajat balansi</div>
+                <div class="bar-chart">
+                    <div class="bar-row">
+                        <div class="bar-label">Xarajat ulushi</div>
+                        <div class="bar-track"><div class="bar-fill" style="width:${xarajatFoiz}%; background:var(--red)"></div></div>
+                        <div class="bar-val">${xarajatFoiz}%</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    if(pId === 'users') {
+        document.getElementById("users-list").innerHTML = `
+            <div class="user-card"><div class="uc-avatar">J</div><div><div class="uc-name">Juraev</div><div class="uc-login">@juraev</div></div><div class="uc-badge uc-ceo">CEO</div></div>
+            <div class="user-card"><div class="uc-avatar">X</div><div><div class="uc-name">Xishmanov</div><div class="uc-login">@xishmanov</div></div><div class="uc-badge uc-mgr">MANAGER</div></div>
+        `;
+    }
 }
 
-/* ── CEO: FOYDALANUVCHILAR ── */
-function renderUsers() {
-  const el = document.getElementById('users-list');
-  if (!el) return;
-  const users = (typeof USERS !== 'undefined') ? USERS : [
-    { name:'Firuz Juraev',    login:'juraev',    role:'CEO'     },
-    { name:'Xushnud Eshmanov',login:'xishmanov', role:'Manager' }
-  ];
-  el.innerHTML = users.map(u => `
-    <div class="user-card">
-      <div class="uc-avatar">${u.name[0]}</div>
-      <div>
-        <div class="uc-name">${u.name}</div>
-        <div class="uc-login">@${u.login}</div>
-      </div>
-      <span class="uc-badge ${u.role==='CEO'?'uc-ceo':'uc-mgr'}">${u.role}</span>
-    </div>`).join('');
+// INTERFEYS NAVIGATSIYASI (PANEL ALMASHTIRISH)
+function openPanel(panelId) {
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    document.querySelectorAll(".sb-btn").forEach(b => b.classList.remove("active"));
+
+    const target = document.getElementById(`panel-${panelId}`);
+    if(target) target.classList.add("active");
+
+    const navBtn = document.getElementById(`nav-${panelId}`);
+    if(navBtn) navBtn.classList.add("active");
+
+    // Sarlavhani o'zgartirish
+    const unvonlar = { dc: "Kunlik Kredit", db: "Debet", dt: "Qarz kiritish", hist: "Moliyaviy Tarix", report: "Oylik Hisobot", analytics: "Tizim Analitikasi", users: "Foydalanuvchilar", settings: "Tizim Sozlamalari" };
+    document.getElementById("page-title").innerText = unvonlar[panelId] || "Panel";
+
+    if(panelId === 'hist') renderHistory();
+    if(['report', 'analytics', 'users'].includes(panelId)) renderCEOPanels(panelId);
 }
 
-/* ── CEO: SOZLAMALAR ── */
-function clearAllData() {
-  if (!confirm("Barcha ma'lumotlarni o'chirishga ishonchingiz komilmi?")) return;
-  credits = []; debits = []; debts = [];
-  saveData('df_credits', credits);
-  saveData('df_debits',  debits);
-  saveData('df_debts',   debts);
-  updateStats();
-  renderDashboard();
-  showToast("🗑 Barcha ma'lumotlar tozalandi");
+function showDashboard() {
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    document.querySelectorAll(".sb-btn").forEach(b => b.classList.remove("active"));
+    
+    document.getElementById("panel-dashboard").classList.add("active");
+    document.getElementById("nav-dashboard").classList.add("active");
+    document.getElementById("page-title").innerText = "Dashboard";
+    renderDashboard();
 }
 
-function exportData() {
-  const data = { credits, debits, debts, exportDate: new Date().toISOString() };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
-  a.download = 'daimon_fertility_' + getToday() + '.json';
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast('📥 Ma\'lumotlar yuklab olindi');
+// FORMALARI TOZALASH
+function clearForm(prefix) {
+    if(prefix === 'dc') {
+        document.getElementById("dc-total").value = "";
+        document.getElementById("dc-card").value = "";
+        document.getElementById("dc-cash").value = "";
+        document.getElementById("dc-taxcash").value = "";
+    } else if(prefix === 'db') {
+        document.getElementById("db-amount").value = "";
+        document.getElementById("db-reason").value = "";
+    } else if(prefix === 'dt') {
+        document.getElementById("dt-total").value = "";
+        document.getElementById("dt-reason").value = "";
+    }
+}
+
+// TOAST BILDIRISHNOMASI
+function showToast(msg, type = "green") {
+    const toast = document.getElementById("toast");
+    toast.innerText = msg;
+    toast.style.background = type === "red" ? "var(--red)" : (type === "amber" ? "var(--amber)" : "var(--green)");
+    toast.style.display = "block";
+    setTimeout(() => { toast.style.display = "none"; }, 3500);
+}
+
+function toggleSidebar() {
+    document.getElementById("sidebar").classList.toggle("open");
+    document.getElementById("overlay").classList.toggle("show");
+}
+
+function formatMoney(num) {
+    return new Intl.NumberFormat("uz-UZ").format(num) + " so'm";
 }
