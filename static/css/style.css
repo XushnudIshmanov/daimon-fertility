@@ -45,7 +45,7 @@ body{
 /* ══════════════
    LOGIN
 ══════════════ */
-#s-login.active{display:flex;align-items:center;justify-content:center;min-height:100vh;position:relative;overflow:hidden;background:linear-gradient(135deg,#0D7A57 0%,#16A374 40%,#1db88a 100%);}
+#s-login.active{display:flex;align-items:center;justify-content:center;min-height:100vh;position:relative;overflow:hidden;background: radial-gradient(circle, #1e293b 0%, #0f172a 100%);}
 .login-bg{position:absolute;inset:0;pointer-events:none;}
 .login-orb{position:absolute;border-radius:50%;filter:blur(60px);opacity:.35;}
 .o1{width:400px;height:400px;background:#fff;top:-100px;left:-100px;}
@@ -63,7 +63,7 @@ body{
 @keyframes slideUp{from{opacity:0;transform:translateY(28px);}to{opacity:1;transform:none;}}
 
 .lc-header{
-  background:linear-gradient(135deg,var(--green),var(--green-dark));
+  background: linear-gradient(135deg,#b2eff0,#197088f4);
   padding:2rem 2rem 1.5rem;
   text-align:center;
   color:#fff;
