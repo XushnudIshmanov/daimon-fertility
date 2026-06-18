@@ -10,7 +10,7 @@ from typing import Optional, List
 
 app = FastAPI()
 
-# Barcha qurilmalardan (telefon/kompyuter) keladigan so'rovlarga ruxsat berish
+# Barcha qurilmalardan keladigan so'rovlarga ruxsat berish
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -43,18 +43,12 @@ def load_data():
             return json.load(f)
     except Exception:
         return {"users": [], "transactions": []}
-    
-    try:
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return {"users": [], "transactions": []}
 
 def save_data(data):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
 
-# Pydantic modellar (FastAPI ma'lumotlarni tekshirishi uchun)
+# Pydantic modellar
 class LoginModel(BaseModel):
     username: str
     password: str
@@ -103,3 +97,17 @@ async def api_add_transaction(tx: TransactionModel):
 @app.get("/ping")
 async def ping():
     return {"status": "OK"}
+
+# ── API: CEO BARCHA MA'LUMOTLARNI TOZALASH ──
+@app.post("/api/clear-data")
+async def clear_all_data():
+    db = load_data()
+    
+    # Faqat tranzaksiyalarni (kredit, debet, qarz) tozalaymiz, userlar qoladi!
+    db["transactions"] = []
+    
+    save_data(db)
+    return {
+        "success": True,
+        "message": "Barcha ma'lumotlar muvaffaqiyatli tozalandi!"
+    }

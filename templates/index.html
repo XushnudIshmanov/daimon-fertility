@@ -432,5 +432,47 @@
 
 <script src="/static/js/data.js"></script>
 <script src="/static/js/app.js"></script>
+<div class="toast" id="toast"></div>
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+<script src="/static/js/data.js"></script>
+<script src="/static/js/app.js"></script>
+
+<script>
+async function clearAllData() {
+    // 1-bosqich: Birinchi ogohlantirish
+    const firstConfirm = confirm("⚠️ DIQQAT! Tizimdagi barcha kiritilgan ma'lumotlar (kredit, debet, qarzlar) butunlay o'chib ketadi. Davom ettirasizmi?");
+    
+    if (firstConfirm) {
+        // 2-bosqich: Xavfsizlik uchun ikkinchi qat'iy tasdiqlash
+        const secondConfirm = confirm("🛑 ROSTAN HAM HAMMA MA'LUMOTLARNI O'CHIRMOQCHIMISIZ? Bu amalni ortga qaytarib bo'lmaydi va hamma foydalanuvchilar uchun ma'lumotlar o'chadi!");
+        
+        if (secondConfirm) {
+            try {
+                // Serverdagi yangi endpointga so'rov yuboramiz
+                const response = await fetch('/api/clear-data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    alert("✅ " + result.message);
+                    window.location.reload(); // Sahifani yangilab, ma'lumotlarni nol qilib ko'rsatadi
+                } else {
+                    alert("❌ Xatolik yuz berdi: Ma'lumotlarni tozalash imkoni bo'lmadi.");
+                }
+            } catch (error) {
+                console.error("Xatolik:", error);
+                alert("❌ Server bilan bog'lanishda xatolik yuz berdi.");
+            }
+        }
+    }
+}
+</script>
+
 </body>
 </html>
