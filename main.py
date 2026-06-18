@@ -111,3 +111,46 @@ async def clear_all_data():
         "success": True,
         "message": "Barcha ma'lumotlar muvaffaqiyatli tozalandi!"
     }
+from datetime import datetime
+
+@app.get("/api/ceo/monthly-report")
+async def get_monthly_report(month: str = None):
+    """
+    month formati: "2026-06" kabi keladi. 
+    Agar oy yuborilmasa, avtomatik joriy oyni hisoblaydi.
+    """
+    db = load_data()
+    transactions = db.get("transactions", [])
+    
+    # Agar oy tanlanmagan bo'lsa, hozirgi yil va oyni aniqlaymiz
+    if not month:
+        month = datetime.now().strftime("%Y-%m")
+        
+    # Barcha bor oylarni ro'yxatini shakllantiramiz (Dropdown tugmasi ichida ko'rsatish uchun)
+    available_months = set()
+    for tx in transactions:
+        if "date" in tx and len(tx["date"]) >= 7:
+            available_months.add(tx["date"][:7]) # "2026-06" qismini oladi
+            
+    # Agar joriy oy tranzaksiyalarda hali bo'lmasa, uni ham ro'yxatga qo'shamiz
+    current_month = datetime.now().strftime("%Y-%m")
+    available_months.add(current_month)
+    
+    # Faqat tanlangan oyga tegishli tranzaksiyalarni filtrlash
+    filtered_tx = [tx for tx in transactions if tx.get("date", "").startswith(month)]
+    
+    # Matematik hisob-kitoblar
+    total_kirim = sum(tx["amount"] for tx in filtered_tx if tx["type"] == "kredit")
+    total_chiqim = sum(tx["amount"] for tx in filtered_tx if tx["type"] == "debet")
+    sof_foyda = total_kirim - total_chiqim
+    
+    return {
+        "selected_month": month,
+        "available_months": sorted(list(available_months), reverse=True),
+        "summary": {
+            "kirim": total_kirim,
+            "chiqim": total_chiqim,
+            "foyda": sof_foyda
+        },
+        "transactions": filtered_tx
+    }

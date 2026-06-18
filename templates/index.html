@@ -357,16 +357,41 @@
 
     <!-- ── CEO: HISOBOT ── -->
     <div class="panel ceo-panel" id="panel-report">
-      <div class="panel-header">
-        <div class="ph-icon" style="background:linear-gradient(135deg,#0ea5e9,#0369a1)">📑</div>
-        <div>
-          <div class="ph-title">Oylik Hisobot</div>
-          <div class="ph-sub">CEO uchun moliyaviy tahlil</div>
-        </div>
-        <div class="ceo-badge">CEO ONLY</div>
+  <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+    <div style="display: flex; align-items: center; gap: 15px;">
+      <div class="ph-icon" style="background:linear-gradient(135deg,#0ea5e9,#0369a1)">📑</div>
+      <div>
+        <div class="ph-title">Oylik Hisobot</div>
+        <div class="ph-sub">CEO uchun moliyaviy tahlil</div>
       </div>
-      <div class="report-grid" id="report-grid"></div>
     </div>
+    
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <label for="report-month-select" style="font-weight: 600; font-size: 14px; color: #475569;">Oy:</label>
+      <select id="report-month-select" onchange="loadMonthlyReport(this.value)" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #cbd5e1; font-weight: bold; background: #fff; color: #1e293b; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+        </select>
+    </div>
+  </div>
+  
+  <div class="report-grid" id="report-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; padding: 20px 0;">
+    
+    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 24px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+      <div style="color: #16a34a; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">📈 Umumiy Kirim (Daromad)</div>
+      <div id="report-kirim" style="font-size: 26px; font-weight: 800; color: #15803d; margin-top: 8px;">0 UZS</div>
+    </div>
+
+    <div style="background: #fef2f2; border: 1px solid #fecaca; padding: 24px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+      <div style="color: #dc2626; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">📉 Umumiy Chiqim (Xarajat)</div>
+      <div id="report-chiqim" style="font-size: 26px; font-weight: 800; color: #b91c1c; margin-top: 8px;">0 UZS</div>
+    </div>
+
+    <div id="report-foyda-card" style="background: #f0f9ff; border: 1px solid #bae6fd; padding: 24px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+      <div style="color: #0284c7; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">💰 Sof Foyda</div>
+      <div id="report-foyda" style="font-size: 26px; font-weight: 800; color: #0369a1; margin-top: 8px;">0 UZS</div>
+    </div>
+
+  </div>
+</div>
 
     <!-- ── CEO: ANALITIKA ── -->
     <div class="panel ceo-panel" id="panel-analytics">
@@ -439,6 +464,53 @@
 <script src="/static/js/app.js"></script>
 
 <script>
+// 1. Sahifa yuklanishi bilan oylik hisobotni avtomatik yuklaydigan kod
+document.addEventListener("DOMContentLoaded", () => {
+    loadMonthlyReport(); 
+});
+
+async function loadMonthlyReport(selectedMonth = "") {
+    try {
+        const url = selectedMonth ? `/api/ceo/monthly-report?month=${selectedMonth}` : '/api/ceo/monthly-report';
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (response.ok) {
+            // Dropdown ichidagi select oylari ro'yxatini shakllantiramiz
+            const selectEl = document.getElementById("report-month-select");
+            if (selectEl) {
+                const selectHTML = data.available_months.map(m => {
+                    const isSelected = m === data.selected_month ? "selected" : "";
+                    return `<option value="${m}" ${isSelected}>${m}</option>`;
+                }).join("");
+                selectEl.innerHTML = selectHTML;
+            }
+
+            // Kartochkalarga summalarni chiroyli formatda yozamiz
+            document.getElementById("report-kirim").innerText = Number(data.summary.kirim).toLocaleString() + " UZS";
+            document.getElementById("report-chiqim").innerText = Number(data.summary.chiqim).toLocaleString() + " UZS";
+            document.getElementById("report-foyda").innerText = Number(data.summary.foyda).toLocaleString() + " UZS";
+
+            // Sof foyda minusga kirib ketsa kartani qizil, plus bo'lsa havorang qilish
+            const foydaCard = document.getElementById("report-foyda-card");
+            if (foydaCard) {
+                if (data.summary.foyda < 0) {
+                    foydaCard.style.background = "#fff5f5";
+                    foydaCard.style.borderColor = "#feb2b2";
+                    document.getElementById("report-foyda").style.color = "#b91c1c";
+                } else {
+                    foydaCard.style.background = "#f0f9ff";
+                    foydaCard.style.borderColor = "#bae6fd";
+                    document.getElementById("report-foyda").style.color = "#0369a1";
+                }
+            }
+        }
+    } catch (error) {
+        console.error("Hisobotni yuklashda xatolik:", error);
+    }
+}
+
+// 2. Tizimni xavfsiz tozalash funksiyasi
 async function clearAllData() {
     // 1-bosqich: Birinchi ogohlantirish
     const firstConfirm = confirm("⚠️ DIQQAT! Tizimdagi barcha kiritilgan ma'lumotlar (kredit, debet, qarzlar) butunlay o'chib ketadi. Davom ettirasizmi?");
@@ -449,7 +521,6 @@ async function clearAllData() {
         
         if (secondConfirm) {
             try {
-                // Serverdagi yangi endpointga so'rov yuboramiz
                 const response = await fetch('/api/clear-data', {
                     method: 'POST',
                     headers: {
@@ -461,7 +532,7 @@ async function clearAllData() {
                 
                 if (response.ok && result.success) {
                     alert("✅ " + result.message);
-                    window.location.reload(); // Sahifani yangilab, ma'lumotlarni nol qilib ko'rsatadi
+                    window.location.reload(); 
                 } else {
                     alert("❌ Xatolik yuz berdi: Ma'lumotlarni tozalash imkoni bo'lmadi.");
                 }
