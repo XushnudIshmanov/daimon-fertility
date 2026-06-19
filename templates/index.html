@@ -9,47 +9,135 @@
 </head>
 <body>
 
-<!-- ══════════ LOGIN ══════════ -->
+<!-- ══════════ LOGIN (YANGI DIZAYN) ══════════ -->
 <div id="s-login" class="screen active">
-  <div class="login-bg">
-    <div class="login-orb o1"></div>
-    <div class="login-orb o2"></div>
-    <div class="login-orb o3"></div>
+
+  <!-- Fon: barglar SVG -->
+  <div class="login-bg-new">
+    <!-- Chap yuqori barg -->
+    <svg class="leaf-svg leaf-tl" viewBox="0 0 300 350" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M40 320 Q-20 200 60 100 Q120 20 200 10 Q150 80 130 160 Q110 240 40 320Z" fill="#b2d8d8" opacity="0.35"/>
+      <path d="M80 310 Q30 210 90 120 Q140 50 210 40 Q170 100 155 175 Q140 250 80 310Z" fill="#7fb8b8" opacity="0.22"/>
+      <!-- barg tomir -->
+      <path d="M40 320 Q120 180 200 10" stroke="#7fb8b8" stroke-width="1.5" opacity="0.4" fill="none"/>
+      <path d="M70 280 Q110 210 160 120" stroke="#7fb8b8" stroke-width="1" opacity="0.25" fill="none"/>
+      <!-- kichik barglar -->
+      <path d="M10 160 Q-10 120 30 90 Q50 80 60 100 Q40 120 10 160Z" fill="#b2d8d8" opacity="0.3"/>
+      <path d="M5 220 Q-15 180 20 155 Q40 145 50 160 Q30 175 5 220Z" fill="#b2d8d8" opacity="0.25"/>
+    </svg>
+
+    <!-- O'ng yuqori barg -->
+    <svg class="leaf-svg leaf-tr" viewBox="0 0 300 350" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M260 320 Q320 200 240 100 Q180 20 100 10 Q150 80 170 160 Q190 240 260 320Z" fill="#b2d8d8" opacity="0.35"/>
+      <path d="M220 310 Q270 210 210 120 Q160 50 90 40 Q130 100 145 175 Q160 250 220 310Z" fill="#7fb8b8" opacity="0.22"/>
+      <path d="M260 320 Q180 180 100 10" stroke="#7fb8b8" stroke-width="1.5" opacity="0.4" fill="none"/>
+      <!-- kichik barglar -->
+      <path d="M290 160 Q310 120 270 90 Q250 80 240 100 Q260 120 290 160Z" fill="#b2d8d8" opacity="0.3"/>
+      <path d="M295 220 Q315 180 280 155 Q260 145 250 160 Q270 175 295 220Z" fill="#b2d8d8" opacity="0.25"/>
+    </svg>
+
+    <!-- Chap pastki barg -->
+    <svg class="leaf-svg leaf-bl" viewBox="0 0 280 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M30 20 Q-20 130 50 230 Q100 300 180 310 Q140 250 120 170 Q100 90 30 20Z" fill="#b2d8d8" opacity="0.3"/>
+      <path d="M65 30 Q20 130 80 220 Q125 285 195 295 Q160 240 145 165 Q130 90 65 30Z" fill="#7fb8b8" opacity="0.2"/>
+      <path d="M30 20 Q110 160 180 310" stroke="#7fb8b8" stroke-width="1.5" opacity="0.35" fill="none"/>
+    </svg>
+
+    <!-- O'ng pastki barg -->
+    <svg class="leaf-svg leaf-br" viewBox="0 0 280 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M250 20 Q300 130 230 230 Q180 300 100 310 Q140 250 160 170 Q180 90 250 20Z" fill="#b2d8d8" opacity="0.3"/>
+      <path d="M215 30 Q260 130 200 220 Q155 285 85 295 Q120 240 135 165 Q150 90 215 30Z" fill="#7fb8b8" opacity="0.2"/>
+      <path d="M250 20 Q170 160 100 310" stroke="#7fb8b8" stroke-width="1.5" opacity="0.35" fill="none"/>
+    </svg>
+
+    <!-- Markaziy ona va bola SVG rasmi -->
+    <div class="mother-svg-wrap">
+      <svg viewBox="0 0 260 320" fill="none" xmlns="http://www.w3.org/2000/svg" class="mother-svg">
+        <!-- Ona tanasi -->
+        <ellipse cx="130" cy="200" rx="70" ry="95" stroke="#8bbcbc" stroke-width="2" opacity="0.45"/>
+        <!-- Ona boshi -->
+        <circle cx="105" cy="95" r="32" stroke="#8bbcbc" stroke-width="2" opacity="0.45"/>
+        <!-- Ona sochi -->
+        <path d="M78 80 Q85 50 105 48 Q125 46 132 65 Q140 50 135 35 Q118 15 100 18 Q75 22 70 50 Q68 65 78 80Z" stroke="#8bbcbc" stroke-width="1.5" opacity="0.4" fill="none"/>
+        <!-- Bola -->
+        <circle cx="155" cy="175" r="22" stroke="#8bbcbc" stroke-width="1.8" opacity="0.4"/>
+        <!-- Ona qo'llari -->
+        <path d="M85 130 Q60 155 65 190 Q68 210 90 215" stroke="#8bbcbc" stroke-width="2" stroke-linecap="round" opacity="0.4" fill="none"/>
+        <path d="M130 135 Q165 145 168 170 Q170 195 155 200" stroke="#8bbcbc" stroke-width="2" stroke-linecap="round" opacity="0.4" fill="none"/>
+        <!-- Yurak -->
+        <path d="M118 108 Q118 104 122 104 Q126 104 126 108 Q126 104 130 104 Q134 104 134 108 Q134 114 126 120 Q118 114 118 108Z" fill="#8bbcbc" opacity="0.35"/>
+      </svg>
+    </div>
+
+    <!-- Mayda nuqtalar -->
+    <div class="login-dot d1"></div>
+    <div class="login-dot d2"></div>
+    <div class="login-dot d3"></div>
+    <div class="login-dot d4"></div>
   </div>
-  <div class="login-wrap">
-    <div class="login-card"style="padding-bottom: 40px;">
-      <div class="lc-header" style="text-align: center; margin-bottom: 25px;">
-        <div class="lc-logo" style="margin-bottom: 15px; display: flex; justify-content: center;">
-          <img src="https://i.ibb.co/Q7mPb9Sn/daimon.png" alt="Daimon Fertility Logo" style="height: 75px; width: auto; object-fit: contain;">
+
+  <!-- Login kartasi -->
+  <div class="login-wrap-new">
+    <div class="login-card-new">
+
+      <!-- Header: Logo -->
+      <div class="lc-header-new">
+        <div class="lc-logo-new">
+          <img src="https://i.ibb.co/Q7mPb9Sn/daimon.png" alt="Daimon Fertility Logo" style="height:64px;width:auto;object-fit:contain;">
         </div>
-        <h1 class="lc-title" style="display: none;">Daimon Fertility</h1>
-        <p class="lc-sub" style="font-size: 14px; color: #ffffff; font-weight: 500; letter-spacing: 0.5px; opacity: 0.95; margin: 0;">Moliyaviy boshqaruv tizimi</p>
+        <p class="lc-sub-new">Moliyaviy boshqaruv tizimi</p>
       </div>
-      <div class="lc-body">
-        <div class="lfield">
+
+      <!-- Form -->
+      <div class="lc-body-new">
+        <div class="lfield-new">
           <label>LOGIN</label>
-          <div class="input-wrap">
-            <span class="input-icon">👤</span>
+          <div class="input-wrap-new">
+            <span class="input-icon-new">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6aacac" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            </span>
             <input type="text" id="inp-login" placeholder="loginni kiriting"/>
           </div>
         </div>
-        <div class="lfield">
+
+        <div class="lfield-new">
           <label>PAROL</label>
-          <div class="input-wrap">
-            <span class="input-icon">🔒</span>
+          <div class="input-wrap-new">
+            <span class="input-icon-new">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6aacac" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </span>
             <input type="password" id="inp-pass" placeholder="••••••••"
                    onkeydown="if(event.key==='Enter') doLogin()"/>
           </div>
         </div>
-        <button class="btn-login" onclick="doLogin()" style="background: linear-gradient(135deg, #e63946 0%, #ba1824 100%); border: none; color: white; box-shadow: 0 4px 12px rgba(230, 57, 70, 0.3);">
+
+        <!-- Remember + forgot -->
+        <div class="lc-row-new">
+          <label class="remember-label">
+            <input type="checkbox" id="remember-me" checked/>
+            <span>Meni eslab qolish</span>
+          </label>
+          <a href="#" class="forgot-link">Parolni unutdingiz?</a>
+        </div>
+
+        <button class="btn-login-new" onclick="doLogin()">
           <span>Tizimga kirish</span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </button>
+
         <div class="login-err" id="login-err">⚠️ Login yoki parol noto'g'ri!</div>
+
+        <!-- Ma'lumot himoyalangan -->
+        <div class="lc-secure">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6aacac" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span>Ma'lumotlaringiz himoyalangan</span>
+        </div>
       </div>
+
     </div>
   </div>
 </div>
+
 
 
 <!-- ══════════ ASOSIY SAHIFA ══════════ -->
