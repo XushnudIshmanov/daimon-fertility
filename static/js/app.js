@@ -385,10 +385,7 @@ function renderCEOPanels(pId) {
         `;
     }
     if(pId === 'users') {
-        document.getElementById("users-list").innerHTML = `
-            <div class="user-card"><div class="uc-avatar">J</div><div><div class="uc-name">Juraev</div><div class="uc-login">@juraev</div></div><div class="uc-badge uc-ceo">CEO</div></div>
-            <div class="user-card"><div class="uc-avatar">X</div><div><div class="uc-name">Xishmanov</div><div class="uc-login">@xishmanov</div></div><div class="uc-badge uc-mgr">MANAGER</div></div>
-        `;
+        loadSystemUsers();
     }
 }
 
@@ -409,6 +406,7 @@ function openPanel(panelId) {
 
     if(panelId === 'hist') renderHistory();
     if(['report', 'analytics', 'users'].includes(panelId)) renderCEOPanels(panelId);
+    if(panelId === 'users') loadSystemUsers();
 }
 
 function showDashboard() {
@@ -453,4 +451,109 @@ function toggleSidebar() {
 
 function formatMoney(num) {
     return new Intl.NumberFormat("uz-UZ").format(num) + " so'm";
+}
+
+// Serverdan foydalanuvchilarni yuklash va ro'yxatni chizish
+async function loadSystemUsers() {
+    try {
+        const response = await fetch(`${API_URL}/api/ceo/users`);
+        const data = await response.json();
+        
+        const listDiv = document.getElementById("users-list");
+        if (!listDiv) return;
+        listDiv.innerHTML = "";
+        
+        if (!data.users || data.users.length === 0) {
+            listDiv.innerHTML = "<p>Foydalanuvchilar topilmadi.</p>";
+            return;
+        }
+        
+        data.users.forEach(u => {
+            const avatarLet = u.name ? u.name[0].toUpperCase() : "U";
+            const badgeCls = u.role === "ceo" ? "uc-ceo" : "uc-mgr";
+            
+            // O'chirish tugmasi (Asosiy juraev logini tasodifan o'chib ketmasligi uchun himoya)
+            const deleteBtn = u.username !== "juraev" 
+                ? `<button onclick="deleteSystemUser('${u.username}')" style="background:#ef4444; color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-weight:600; font-size:12px; transition: 0.2s;">🗑 O'chirish</button>`
+                : `<span style="color:#94a3b8; font-size:12px; font-style:italic;">Asosiy</span>`;
+
+            const html = `
+                <div class="user-card" style="display: flex; align-items: center; justify-content: space-between; background: #fff; padding: 15px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div class="uc-avatar" style="width: 40px; height: 40px; background: #e2f2f2; color: #6aacac; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold;">${avatarLet}</div>
+                        <div>
+                            <div class="uc-name" style="font-weight: 600; color: #1e293b;">${u.name}</div>
+                            <div class="uc-login" style="font-size: 13px; color: #64748b;">@${u.username}</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div class="uc-badge ${badgeCls}" style="padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; text-transform: uppercase;">${u.role}</div>
+                        ${deleteBtn}
+                    </div>
+                </div>
+            `;
+            listDiv.insertAdjacentHTML("beforeend", html);
+        });
+    } catch (e) {
+        showToast("Foydalanuvchilarni yuklashda xatolik!", "red");
+    }
+}
+
+// Yangi foydalanuvchi qo'shish funksiyasi
+async function addSystemUser() {
+    const name = document.getElementById("nu-name").value.trim();
+    const username = document.getElementById("nu-login").value.trim();
+    const password = document.getElementById("nu-pass").value.trim();
+    const role = document.getElementById("nu-role").value;
+
+    if (!name || !username || !password) {
+        showToast("Barcha maydonlarni to'ldiring!", "amber");
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/api/ceo/users`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, username, password, role })
+        });
+        
+        const res = await response.json();
+        if (response.ok && res.success) {
+            showToast("Foydalanuvchi muvaffaqiyatli qo'shildi! 🎉", "green");
+            // Inputlarni tozalash
+            document.getElementById("nu-name").value = "";
+            document.getElementById("nu-login").value = "";
+            document.getElementById("nu-pass").value = "";
+            // Ro'yxatni qayta yuklash
+            await loadSystemUsers();
+        } else {
+            showToast(res.detail || "Xatolik yuz berdi", "red");
+        }
+    } catch (e) {
+        showToast("Server bilan aloqa uzildi!", "red");
+    }
+}
+
+// Foydalanuvchini o'chirish funksiyasi
+async function deleteSystemUser(username) {
+    if (!confirm(`Haqiqatdan ham @${username} foydalanuvchisini tizimdan o'chirmoqchimisiz?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/api/ceo/users/${username}`, {
+            method: "DELETE"
+        });
+        
+        const res = await response.json();
+        if (response.ok && res.success) {
+            showToast("Foydalanuvchi tizimdan o'chirildi!", "green");
+            await loadSystemUsers();
+        } else {
+            showToast(res.detail || "O'chirishda xatolik", "red");
+        }
+    } catch (e) {
+        showToast("Server bilan aloqa uzildi!", "red");
+    }
 }

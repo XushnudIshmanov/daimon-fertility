@@ -60,6 +60,12 @@ class TransactionModel(BaseModel):
     reason: Optional[str] = "-"
     author: Optional[str] = "Tizim"
 
+class UserModel(BaseModel):
+    name: str
+    username: str
+    password: str
+    role: str
+
 # ── FRONTEND SAHIFANI KO'RSATISH ──
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
@@ -154,3 +160,43 @@ async def get_monthly_report(month: str = None):
         },
         "transactions": filtered_tx
     }
+# Barcha foydalanuvchilarni olish (CEO paneli uchun)
+@app.get("/api/ceo/users")
+async def get_all_users():
+    db = load_data()
+    return {"users": db.get("users", [])}
+
+# Yangi foydalanuvchi qo'shish
+@app.post("/api/ceo/users")
+async def add_new_user(user: UserModel):
+    db = load_data()
+    
+    if "users" not in db:
+        db["users"] = []
+        
+    # Login bandligini tekshirish
+    for u in db["users"]:
+        if u["username"] == user.username:
+            raise HTTPException(status_code=400, detail="Bu login band! Boshqasini tanlang.")
+            
+    db["users"].append(user.dict())
+    save_data(db) # yoki sizda save_db(db) bo'lsa, o'sha nomni yozing
+    return {"success": True, "message": "Foydalanuvchi qo'shildi!"}
+
+# Foydalanuvchini o'chirish
+@app.delete("/api/ceo/users/{username}")
+async def delete_user(username: str):
+    db = load_data()
+    users = db.get("users", [])
+    
+    if username == "juraev":
+        raise HTTPException(status_code=400, detail="Asosiy CEO profilini o'chirib bo'lmaydi!")
+        
+    updated_users = [u for u in users if u["username"] != username]
+    
+    if len(users) == len(updated_users):
+        raise HTTPException(status_code=404, detail="Foydalanuvchi topilmadi!")
+        
+    db["users"] = updated_users
+    save_data(db)
+    return {"success": True, "message": "Foydalanuvchi o'chirildi!"}
