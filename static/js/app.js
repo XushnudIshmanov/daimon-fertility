@@ -135,38 +135,77 @@ function updateUserUI() {
     }
 }
 
-// DASHBOARD EKOSISTEMASI
+// DASHBOARD EKOSISTEMASI (XAVFSIZ VA INTEGRATSIYALASHGAN VARIANTI)
 function renderDashboard() {
-    let joriyBalans = 0, buOyKredit = 0, buOyDebet = 0, jamiQarz = 0;
-    const bugun = new Date();
-    const joriyOy = bugun.toISOString().substring(0, 7); // YYYY-MM
+    try {
+        let naqdBalans = 0, kartaBalans = 0, soliqZaxira = 0;
+        let buOyKredit = 0, buOyDebet = 0, jamiQarz = 0;
+        
+        const bugun = new Date();
+        const joriyOy = bugun.toISOString().substring(0, 7); // YYYY-MM
 
-    appState.transactions.forEach(tx => {
-        const txOy = tx.date.substring(0, 7);
-        const summa = parseFloat(tx.amount) || 0;
+        appState.transactions.forEach(tx => {
+            const txOy = tx.date.substring(0, 7);
+            const jamiSumma = parseFloat(tx.amount) || 0;
 
-        if (tx.type === "credit") {
-            joriyBalans += summa;
-            if (txOy === joriyOy) buOyKredit += summa;
-        } else if (tx.type === "debit") {
-            joriyBalans -= summa;
-            if (txOy === joriyOy) buOyDebet += summa;
-        } else if (tx.type === "debt") {
-            jamiQarz += summa;
+            if (tx.type === "credit") {
+                let txCash = 0, txCard = 0, txTax = 0;
+                
+                const cashMatch = tx.reason ? tx.reason.match(/Naqd:\s*([\d.]+)/) : null;
+                const cardMatch = tx.reason ? tx.reason.match(/Karta:\s*([\d.]+)/) : null;
+                const taxMatch = tx.reason ? tx.reason.match(/Soliq:\s*([\d.]+)/) : null;
+                
+                if (cashMatch) txCash = parseFloat(cashMatch[1]) || 0;
+                if (cardMatch) txCard = parseFloat(cardMatch[1]) || 0;
+                if (taxMatch) txTax = parseFloat(taxMatch[1]) || 0;
+                
+                if (txCash === 0 && txCard === 0 && txTax === 0) txCash = jamiSumma;
+
+                naqdBalans += txCash;
+                kartaBalans += txCard;
+                soliqZaxira += txTax;
+
+                if (txOy === joriyOy) {
+                    buOyKredit += txCash; // Dashboardda faqat naqd qismi bu oyning tushumi bo'lib ko'rinadi
+                }
+
+            } else if (tx.type === "debit") {
+                if (txOy === joriyOy) buOyDebet += jamiSumma;
+
+                if (tx.source === "card") {
+                    kartaBalans -= jamiSumma;
+                } else if (tx.source === "tax") {
+                    soliqZaxira -= jamiSumma;
+                } else {
+                    naqdBalans -= jamiSumma;
+                }
+
+            } else if (tx.type === "debt") {
+                jamiQarz += jamiSumma; 
+            }
+        });
+
+        // 🌟 XAVFSIZLIK: Elementlar HTMLda bor-yo'qligini tekshirib keyin qiymat beradi (Dastur qotmaydi)
+        if(document.getElementById("st-bal")) document.getElementById("st-bal").innerText = formatMoney(naqdBalans);
+        if(document.getElementById("st-crd")) document.getElementById("st-crd").innerText = formatMoney(buOyKredit);
+        if(document.getElementById("st-dbt")) document.getElementById("st-dbt").innerText = formatMoney(buOyDebet);
+        if(document.getElementById("st-debt")) document.getElementById("st-debt").innerText = formatMoney(jamiQarz);
+
+        // Qo'shimcha vitrinalar (Agar HTMLga qo'shgan bo'lsangiz yangilanadi)
+        if(document.getElementById("st-cash")) document.getElementById("st-cash").innerText = formatMoney(naqdBalans);
+        if(document.getElementById("st-card")) document.getElementById("st-card").innerText = formatMoney(kartaBalans);
+        if(document.getElementById("st-tax-reserve")) document.getElementById("st-tax-reserve").innerText = formatMoney(soliqZaxira);
+
+        if(document.getElementById("bal-trend")) {
+            document.getElementById("bal-trend").innerText = naqdBalans >= 0 ? "↑" : "↓";
         }
-    });
+        
+        renderRecentList();
 
-    // Kartalarga yozish
-    document.getElementById("st-bal").innerText = formatMoney(joriyBalans);
-    document.getElementById("st-crd").innerText = formatMoney(buOyKredit);
-    document.getElementById("st-dbt").innerText = formatMoney(buOyDebet);
-    document.getElementById("st-debt").innerText = formatMoney(jamiQarz);
-
-    // Trend belgisi
-    document.getElementById("bal-trend").innerText = joriyBalans >= 0 ? "↑" : "↓";
-
-    // So'nggi amallar ro'yxati (Top 5)
-    renderRecentList();
+    } catch (error) {
+        console.error("Dashboard chizishda xatolik:", error);
+        showToast("Ma'lumot yuklashda xatolik yuz berdi!", "red");
+    }
 }
 
 function renderRecentList() {
@@ -275,24 +314,29 @@ function saveDB() {
     clearForm('db');
 }
 
-// QARZ SAQLASH
+// QARZ SAQLASH (YANGILANDI: QARZNI UZISH IMKONIYaTI BILAN)
 function saveDT() {
     const miqdor = parseFloat(document.getElementById("dt-total").value) || 0;
     const sabab = document.getElementById("dt-reason").value.trim();
+    const action = document.getElementById("dt-action") ? document.getElementById("dt-action").value : "plus"; // html elementdan qiymat oladi
     const bugun = new Date().toISOString().split('T')[0];
 
     if (miqdor <= 0) { showToast("Qarz miqdorini kiriting!", "amber"); return; }
 
+    // Agar qarzni qaytarish bo'lsa, miqdor bazaga MANFIY (-) bo'lib boradi va jami qarzdan ayriladi!
+    const yakuniyMiqdor = action === "minus" ? -miqdor : miqdor;
+    const qarzTafsiloti = action === "minus" ? `Qarz uzildi: ${sabab}` : `Qarz: ${sabab}`;
+
     sendTransactionToServer({
         type: "debt",
-        amount: miqdor,
+        amount: yakuniyMiqdor,
         date: bugun,
-        reason: `Qarz: ${sabab}`
+        reason: qarzTafsiloti
     });
     clearForm('dt');
 }
 
-// 3. TARIX PANELINI FILTRLASH VA CHIZISH
+// 3. TARIX PANELINI FILTRLASH VA CHIZISH (MOLIYAVIY TO'G'RI VARIANTI)
 function renderHistory() {
     const tur = document.getElementById("h-type").value;
     const dan = document.getElementById("h-from").value;
@@ -310,7 +354,12 @@ function renderHistory() {
         return;
     }
 
-    let jamiSumma = filtrlandi.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+    // 🌟 MANTIQIY TO'G'RILASH: Pullarni turlariga qarab (Naqd, Karta, Soliq) alohida hisoblaymiz!
+    let jamiNaqdKredit = 0;
+    let jamiKartaKredit = 0;
+    let jamiSoliqKredit = 0;
+    let jamiDebet = 0;
+    let sofQarz = 0;
 
     let html = `
         <div class="htable-wrap">
@@ -329,8 +378,28 @@ function renderHistory() {
 
     filtrlandi.forEach(t => {
         let bCls = "badge-green", tNm = "Kredit";
-        if(t.type === "debit") { bCls = "badge-red"; tNm = "Debet"; }
-        if(t.type === "debt") { bCls = "badge-amber"; tNm = "Qarz"; }
+        const summa = parseFloat(t.amount) || 0;
+
+        if (t.type === "credit") {
+            // Izoh ichidan Naqd, Karta va Soliq qiymatlarini regex (qidiruv) orqali ajratib olamiz
+            const cashMatch = t.reason ? t.reason.match(/Naqd:\s*([\d.]+)/) : null;
+            const cardMatch = t.reason ? t.reason.match(/Karta:\s*([\d.]+)/) : null;
+            const taxMatch = t.reason ? t.reason.match(/Soliq:\s*([\d.]+)/) : null;
+            
+            // Alohida o'zgaruvchilarga qo'shib boramiz
+            jamiNaqdKredit += cashMatch ? parseFloat(cashMatch[1]) : summa; 
+            jamiKartaKredit += cardMatch ? parseFloat(cardMatch[1]) : 0;
+            jamiSoliqKredit += taxMatch ? parseFloat(taxMatch[1]) : 0;
+
+        } else if(t.type === "debit") { 
+            bCls = "badge-red"; 
+            tNm = "Debet"; 
+            jamiDebet += summa;
+        } else if(t.type === "debt") { 
+            bCls = "badge-amber"; 
+            tNm = "Qarz"; 
+            sofQarz += summa; 
+        }
 
         html += `
             <tr>
@@ -338,7 +407,7 @@ function renderHistory() {
                 <td><span class="badge ${bCls}">${tNm}</span></td>
                 <td><strong>${t.reason || '-'}</strong></td>
                 <td>${t.author || 'Tizim'}</td>
-                <td><strong>${formatMoney(t.amount)}</strong></td>
+                <td><strong style="color: ${summa < 0 ? 'var(--red)' : ''}">${formatMoney(summa)}</strong></td>
             </tr>
         `;
     });
@@ -346,68 +415,123 @@ function renderHistory() {
     html += `
                 </tbody>
             </table>
-            <div class="hist-total-row">
-                <span class="hist-total-label">Filtrlangan jami miqdor:</span>
-                <span class="hist-total-val" style="color:var(--green)">${formatMoney(jamiSumma)}</span>
+            
+            <div class="hist-total-row" style="display: flex; flex-direction: column; gap: 6px; align-items: flex-end; padding: 15px; background: #f8fafc; border-radius: 8px; margin-top: 10px; border: 1px solid #e2e8f0;">
+                ${jamiNaqdKredit > 0 ? `<div><span class="hist-total-label">💵 Naqd Tushum:</span> <span class="hist-total-val" style="color:var(--green); font-weight:700;">+${formatMoney(jamiNaqdKredit)}</span></div>` : ''}
+                ${jamiKartaKredit > 0 ? `<div><span class="hist-total-label">💳 Karta Tushum:</span> <span class="hist-total-val" style="color:#3b82f6; font-weight:700;">+${formatMoney(jamiKartaKredit)}</span></div>` : ''}
+                ${jamiSoliqKredit > 0 ? `<div><span class="hist-total-label">⚖️ Soliq (Zaxira):</span> <span class="hist-total-val" style="color:#64748b; font-weight:700;">+${formatMoney(jamiSoliqKredit)}</span></div>` : ''}
+                ${jamiDebet > 0 ? `<div><span class="hist-total-label">📉 Xarajat (Debet):</span> <span class="hist-total-val" style="color:var(--red); font-weight:700;">-${formatMoney(jamiDebet)}</span></div>` : ''}
+                ${sofQarz !== 0 ? `<div><span class="hist-total-label">🤝 Qarz Balansi:</span> <span class="hist-total-val" style="color:var(--amber); font-weight:700;">${formatMoney(sofQarz)}</span></div>` : ''}
             </div>
         </div>
     `;
     body.innerHTML = html;
 }
 
-// CEO MAKSUS: HISOBOT VA ANALITIKA GENERATSIYASI
+// OYLIK HISOBOT VA ANALITIKANI MUKAMMAL CHIZISH (CEO PANEL)
 function renderCEOPanels(pId) {
+    // 1. OYLIK HISOBOT PANELl
     if(pId === 'report') {
         const grid = document.getElementById("report-grid");
-        grid.innerHTML = "";
+        if (!grid) return;
+        
+        grid.innerHTML = ""; // Sahifani boshida tozalaymiz
         const oylar = {};
+        
         appState.transactions.forEach(t => {
             const oy = t.date.substring(0, 7);
-            if(!oylar[oy]) oylar[oy] = { c: 0, d: 0, db: 0 };
-            if(t.type === 'credit') oylar[oy].c += t.amount;
-            if(t.type === 'debit') oylar[oy].d += t.amount;
-            if(t.type === 'debt') oylar[oy].db += t.amount;
+            if(!oylar[oy]) oylar[oy] = { naqdTushum: 0, kartaTushum: 0, soliqTushum: 0, xarajat: 0, qarz: 0 };
+            
+            const summa = parseFloat(t.amount) || 0;
+
+            if(t.type === 'credit') {
+                let txCash = 0, txCard = 0, txTax = 0;
+                const cashMatch = t.reason ? t.reason.match(/Naqd:\s*([\d.]+)/) : null;
+                const cardMatch = t.reason ? t.reason.match(/Karta:\s*([\d.]+)/) : null;
+                const taxMatch = t.reason ? t.reason.match(/Soliq:\s*([\d.]+)/) : null;
+                
+                if (cashMatch) txCash = parseFloat(cashMatch[1]) || 0;
+                if (cardMatch) txCard = parseFloat(cardMatch[1]) || 0;
+                if (taxMatch) txTax = parseFloat(taxMatch[1]) || 0;
+                
+                if (txCash === 0 && txCard === 0 && txTax === 0) txCash = summa;
+
+                oylar[oy].naqdTushum += txCash;
+                oylar[oy].kartaTushum += txCard;
+                oylar[oy].soliqTushum += txTax;
+            }
+            if(t.type === 'debit') oylar[oy].xarajat += summa;
+            if(t.type === 'debt') oylar[oy].qarz += summa;
         });
+        
         Object.keys(oylar).sort().reverse().forEach(o => {
             const data = oylar[o];
-            grid.insertAdjacentHTML("beforeend", `
-                <div class="rcard">
-                    <div class="rcard-month">📅 ${o}</div>
-                    <div class="rcard-row"><span>Kredit (Tushum):</span><span class="green-t">+${formatMoney(data.c)}</span></div>
-                    <div class="rcard-row"><span>Debet (Xarajat):</span><span class="red-t">-${formatMoney(data.d)}</span></div>
-                    <div class="rcard-row"><span>Olingan qarzlar:</span><span class="amber-t">${formatMoney(data.db)}</span></div>
-                    <div class="rcard-row"><span>Sof Foyda:</span><strong style="color:var(--text)">${formatMoney(data.c - data.d)}</strong></div>
-                </div>
-            `);
-        });
-    }
-    if(pId === 'analytics') {
-        const body = document.getElementById("analytics-body");
-        let jamiKredit = 0, jamiDebet = 0;
-        appState.transactions.forEach(t => {
-            if(t.type === 'credit') jamiKredit += t.amount;
-            if(t.type === 'debit') jamiDebet += t.amount;
-        });
-        let xarajatFoiz = jamiKredit > 0 ? Math.min(100, Math.round((jamiDebet / jamiKredit) * 100)) : 0;
-        body.innerHTML = `
-            <div class="analytics-cards">
-                <div class="ac-item"><div class="ac-title">Jami Daromad</div><div class="ac-val">${formatMoney(jamiKredit)}</div></div>
-                <div class="ac-item"><div class="ac-title">Jami Xarajat</div><div class="ac-val" style="color:var(--red)">${formatMoney(jamiDebet)}</div></div>
-            </div>
-            <div class="scard" style="margin-top:15px">
-                <div class="section-title">Daromadga nisbatan xarajat balansi</div>
-                <div class="bar-chart">
-                    <div class="bar-row">
-                        <div class="bar-label">Xarajat ulushi</div>
-                        <div class="bar-track"><div class="bar-fill" style="width:${xarajatFoiz}%; background:var(--red)"></div></div>
-                        <div class="bar-val">${xarajatFoiz}%</div>
+            const sofOylikFoyda = data.naqdTushum - data.xarajat;
+
+            grid.innerHTML += `
+                <div class="rcard" style="width: 100%; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); margin-bottom: 20px; border: 1px solid #e2e8f0;">
+                    <div class="rcard-month" style="font-weight:700; margin-bottom:18px; color:#1e293b; font-size:16px;">📅 ${o} (OYLIK HISOBOT)</div>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <div style="display:flex; justify-content:space-between; font-size:14px;"><span>💵 Naqd tushum (Kassa):</span><span style="color:var(--green); font-weight:600;">+${formatMoney(data.naqdTushum)}</span></div>
+                        <div style="display:flex; justify-content:space-between; font-size:14px;"><span>💳 Karta tushumi (Bank):</span><span style="color:#3b82f6; font-weight:600;">+${formatMoney(data.kartaTushum)}</span></div>
+                        <div style="display:flex; justify-content:space-between; font-size:14px;"><span>⚖️ Soliq fondi (Zaxira):</span><span style="color:#64748b; font-weight:600;">+${formatMoney(data.soliqTushum)}</span></div>
+                        <div style="display:flex; justify-content:space-between; font-size:14px;"><span>📉 Jami Xarajat (Debet):</span><span style="color:var(--red); font-weight:600;">-${formatMoney(data.xarajat)}</span></div>
+                        <div style="display:flex; justify-content:space-between; font-size:14px;"><span>🤝 Ushbu oydagi qarz balansi:</span><span style="color:var(--amber); font-weight:600;">${formatMoney(data.qarz)}</span></div>
+                    </div>
+                    <hr style="border: 0; border-top: 1px dashed #e2e8f0; margin: 15px 0;">
+                    <div style="display:flex; justify-content:space-between; font-size:16px;">
+                        <span><strong>💰 Sof Oylik Naqd Foyda:</strong></span>
+                        <strong style="color:${sofOylikFoyda >= 0 ? 'var(--green)' : 'var(--red)'}">${formatMoney(sofOylikFoyda)}</strong>
                     </div>
                 </div>
+            `;
+        });
+    }
+
+    // 2. ANALITIKA PANELl (MUKAMMAL VA UNIVERSAL VARIANT)
+    if(pId === 'analytics') {
+        // HTMLda qaysi biri bo'lsa o'shani avtomatik topadi (Xatolik bermaydi)
+        const analyticsGrid = document.getElementById("analytics-grid") || 
+                              document.getElementById("analytics-body") || 
+                              document.getElementById("report-grid");
+                              
+        if (!analyticsGrid) return;
+        analyticsGrid.innerHTML = ""; // Ichini tozalaymiz
+
+        let jamiDaromad = 0;
+        let jamiXarajat = 0;
+
+        appState.transactions.forEach(t => {
+            const summa = parseFloat(t.amount) || 0;
+            if(t.type === 'credit') jamiDaromad += summa;
+            if(t.type === 'debit') jamiXarajat += summa;
+        });
+
+        const xarajatUlushi = jamiDaromad > 0 ? Math.round((jamiXarajat / jamiDaromad) * 100) : 0;
+
+        analyticsGrid.innerHTML = `
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 25px; width: 100%;">
+                <div class="rcard" style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+                    <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 5px; letter-spacing: 0.5px;">JAMI DAROMAD (UMUMIY)</div>
+                    <div style="font-size: 24px; font-weight: 700; color: var(--green);">${formatMoney(jamiDaromad)}</div>
+                </div>
+                <div class="rcard" style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+                    <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 5px; letter-spacing: 0.5px;">JAMI XARAJAT</div>
+                    <div style="font-size: 24px; font-weight: 700; color: var(--red);">${formatMoney(jamiXarajat)}</div>
+                </div>
+            </div>
+
+            <div class="rcard" style="background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; width: 100%;">
+                <div style="font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 15px; letter-spacing: 0.5px;">DAROMADGA NISBATAN XARAJAT BALANSI</div>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div style="flex: 1; background: #f1f5f9; height: 12px; border-radius: 999px; overflow: hidden;">
+                        <div style="background: var(--red); width: ${xarajatUlushi > 100 ? 100 : xarajatUlushi}%; height: 100%; border-radius: 999px; transition: width 0.5s ease;"></div>
+                    </div>
+                    <div style="font-size: 16px; font-weight: 700; color: #1e293b; min-width: 45px; text-align: right;">${xarajatUlushi}%</div>
+                </div>
+                <div style="font-size: 12px; color: #64748b; margin-top: 8px;">Ushbu davrda tushgan umumiy mablag'ning ${xarajatUlushi}% qismi xarajatlarga sarflandi.</div>
             </div>
         `;
-    }
-    if(pId === 'users') {
-        loadSystemUsers();
     }
 }
 

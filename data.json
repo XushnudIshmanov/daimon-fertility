@@ -11,6 +11,12 @@
             "username": "xishmanov",
             "password": "xushnud007",
             "role": "mgr"
+        },
+        {
+            "name": "Umid",
+            "username": "umid",
+            "password": "umid0210",
+            "role": "mgr"
         }
     ],
     "transactions": []
