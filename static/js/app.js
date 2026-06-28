@@ -26,7 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-// 1. TIZIMGA KIRISH (LOGIN)
+// 1. TIZIMGA KIRISH (LOGIN) - YANGILANGAN VA TOZALANGAN VARIANTI
 async function doLogin() {
     const loginInp = document.getElementById("inp-login").value.trim();
     const passInp = document.getElementById("inp-pass").value.trim();
@@ -43,9 +43,21 @@ async function doLogin() {
         const res = await response.json();
 
         if (response.ok && res.success) {
+            // 1. Foydalanuvchi ma'lumotlarini saqlaymiz
             appState.currentUser = res.user;
             localStorage.setItem("daimon_user", JSON.stringify(res.user));
+            
+            // 2. Dashboard ma'lumotlarini yuklaymiz
             loadDashboardData();
+
+            // 3. 🌟 ESKI FAOL PANELLARNI TOZALASH (Kompyuter keshidagi muammoni yo'qotadi)
+            document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+            document.querySelectorAll(".sb-btn").forEach(b => b.classList.remove("active"));
+
+            // 4. 🌟 Srazu Kunlik Kredit (dc) panelini ochish va sarlavhani to'g'rilash
+            if (typeof openPanel === "function") {
+    openPanel('dashboard');
+}
         } else {
             errDiv.style.display = "block";
         }
@@ -59,8 +71,18 @@ async function doLogin() {
 function doLogout() {
     localStorage.removeItem("daimon_user");
     appState.currentUser = null;
+
+    // 🌟 Chiqib ketayotganda panellarni va tugmalarni faollikdan butunlay o'chiramiz
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    document.querySelectorAll(".sb-btn").forEach(b => b.classList.remove("active"));
+
+    // Ekranlarni almashtirish
     document.getElementById("s-main").classList.remove("active");
     document.getElementById("s-login").classList.add("active");
+
+    if (typeof showToast === "function") {
+        showToast("Tizimdan chiqdingiz!", "blue");
+    }
 }
 
 // SERVERDAN MA'LUMOTLARNI OLISH VA INTERFEYSNI YANGILASH
@@ -93,8 +115,8 @@ function updateUserUI() {
     document.getElementById("sb-avatar").innerText = user.name[0].toUpperCase();
     document.getElementById("tb-avatar").innerText = user.name[0].toUpperCase();
 
-    // Rollar
-    const roleText = user.role === "ceo" ? "Bosh Direktor" : "Menejer";
+    // Rollar (🌟 "Bosh Direktor" so'zi "CEO" ga almashtirildi)
+    const roleText = user.role === "ceo" ? "CEO" : "Menejer";
     document.getElementById("sb-urole").innerText = roleText;
     
     const badge = document.getElementById("role-badge");
@@ -389,8 +411,15 @@ function renderCEOPanels(pId) {
     }
 }
 
-// INTERFEYS NAVIGATSIYASI (PANEL ALMASHTIRISH)
+// INTERFEYS NAVIGATSIYASI (PANEL ALMASHTIRISH - ENG SO'NGGI VARIANTI)
 function openPanel(panelId) {
+    // 🌟 RO'LNI TEKSHIRISH CHEKLOVI: Agar kirgan odam CEO bo'lmasa, uni bosh sahifaga ('dashboard') otib yuboradi
+    const ceoPanels = ['report', 'analytics', 'users'];
+    if (ceoPanels.includes(panelId) && appState.currentUser && appState.currentUser.role !== 'ceo') {
+        openPanel('dashboard'); 
+        return;
+    }
+
     document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
     document.querySelectorAll(".sb-btn").forEach(b => b.classList.remove("active"));
 
@@ -400,8 +429,18 @@ function openPanel(panelId) {
     const navBtn = document.getElementById(`nav-${panelId}`);
     if(navBtn) navBtn.classList.add("active");
 
-    // Sarlavhani o'zgartirish
-    const unvonlar = { dc: "Kunlik Kredit", db: "Debet", dt: "Qarz kiritish", hist: "Moliyaviy Tarix", report: "Oylik Hisobot", analytics: "Tizim Analitikasi", users: "Foydalanuvchilar", settings: "Tizim Sozlamalari" };
+    // Sarlavhani o'zgartirish (🌟 dashboard: "Dashboard" qatori qo'shildi)
+    const unvonlar = { 
+        dashboard: "Dashboard",
+        dc: "Kunlik Kredit", 
+        db: "Debet", 
+        dt: "Qarz kiritish", 
+        hist: "Moliyaviy Tarix", 
+        report: "Oylik Hisobot", 
+        analytics: "Tizim Analitikasi", 
+        users: "Foydalanuvchilar", 
+        settings: "Tizim Sozlamalari" 
+    };
     document.getElementById("page-title").innerText = unvonlar[panelId] || "Panel";
 
     if(panelId === 'hist') renderHistory();

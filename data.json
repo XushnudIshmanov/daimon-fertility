@@ -13,14 +13,5 @@
             "role": "mgr"
         }
     ],
-    "transactions": [
-        {
-            "type": "credit",
-            "amount": 4075000.0,
-            "date": "2026-06-25",
-            "reason": "Kunlik kredit (Naqd: 2710000, Karta: 1365000, Soliq: 250000)",
-            "author": "Juraev",
-            "id": 1
-        }
-    ]
+    "transactions": []
 }
